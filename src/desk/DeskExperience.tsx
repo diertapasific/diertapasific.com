@@ -8,6 +8,7 @@ import { destinations, readLocation } from './model'
 import type { Destination, AboutSection } from './model'
 import './desk.css'
 import { useBrowserVisible } from './browserVisibility'
+import { followSystemTheme, systemThemeQuery } from './systemTheme'
 import { initialOpeningMode, openingSessionKey } from './opening'
 import type { OpeningMode } from './opening'
 import { useTifaChat } from './useTifaChat'
@@ -60,10 +61,8 @@ export default function DeskExperience() {
   const [reset, setReset] = useState(0)
   const [zoomStep, setZoomStep] = useState(0)
   const standing = true, reducedMotion = false
-  const [dark, setDark] = useState(() => {
-    try { const saved = localStorage.getItem('dipa-desk-theme'); if (saved) return saved === 'dark' } catch { /* Storage can be disabled. */ }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-  })
+  const [dark, setDark] = useState(() => window.matchMedia(systemThemeQuery).matches)
+  useEffect(() => followSystemTheme(window.matchMedia(systemThemeQuery), setDark), [])
   const sceneSurface = useRef<HTMLDivElement>(null)
   const [sceneKey, setSceneKey] = useState(0)
   const heading = useRef<HTMLHeadingElement>(null)
@@ -150,7 +149,6 @@ export default function DeskExperience() {
     return () => { document.documentElement.classList.remove('desk-page'); window.removeEventListener('popstate', change); window.removeEventListener('hashchange', change) }
   }, [])
   useEffect(() => {
-    try { localStorage.setItem('dipa-desk-theme', dark ? 'dark' : 'light') } catch { /* The toggle still works without persistence. */ }
     const previous = document.documentElement.style.backgroundColor
     document.documentElement.style.backgroundColor = dark ? '#191b1e' : '#f6f6f6'
     return () => { document.documentElement.style.backgroundColor = previous }
