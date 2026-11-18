@@ -31,12 +31,13 @@ import { FocusDismiss } from './SceneFocusDismiss'
 import { advanceCameraMotion, createCameraMotion } from './cameraMotion'
 
 type SceneProps = {
+  nativeWriting: boolean; writingIndex: number; onWritingIndex: (index: number) => void;
   dark: boolean; selected: Destination | null; onSelect: (id: Destination) => void; aboutSection: AboutSection; onAboutSection: (section: AboutSection) => void;
   reducedMotion: boolean; reset: number; zoomStep: number; standing: boolean; surface: RefObject<HTMLDivElement>; onReady: () => void; onFailure: () => void;
   openingMode: OpeningMode; onOpeningComplete: () => void; onDismiss: () => void;
   chatOpen?: boolean; onAsk?: () => void; replyPulse?: number; projectRequest?: {id:string;revision:number;article?:boolean}|null;
 }
-type ObjectProps = Pick<SceneProps, 'dark' | 'selected' | 'onSelect' | 'aboutSection' | 'onAboutSection' | 'reducedMotion' | 'openingMode' | 'chatOpen' | 'projectRequest'> & { motion: MutableRefObject<DeskMotion>; contentReady: boolean }
+type ObjectProps = Pick<SceneProps, 'dark' | 'selected' | 'onSelect' | 'aboutSection' | 'onAboutSection' | 'reducedMotion' | 'openingMode' | 'chatOpen' | 'projectRequest' | 'nativeWriting' | 'writingIndex' | 'onWritingIndex'> & { motion: MutableRefObject<DeskMotion>; contentReady: boolean }
 
 function Target({ id, position, marker, children, selected, hovered, onHover, onSelect, suppressClickUntil }: {
   id: Destination; position: Point; marker: Point; children: ReactNode; selected: Destination | null; hovered: Destination | null; onHover: (id: Destination | null) => void; onSelect: (id: Destination) => void; suppressClickUntil: MutableRefObject<number>;
@@ -156,7 +157,7 @@ function Desk(props: ObjectProps & Pick<SceneProps, 'standing'> & { annotationPl
       <Target {...targetProps} id="about" position={[0, 0, 0]} marker={[bookPoses.about.rest[0], .85, bookPoses.about.rest[2] + .2]}><Notebook {...props} id="about" /></Target>
       <Target {...targetProps} id="reading" position={[0, 0, 0]} marker={[bookPoses.reading.rest[0], 1.25, bookPoses.reading.rest[2]]}><Notebook {...props} id="reading" /></Target>
       <Target {...targetProps} id="music" position={[0, 0, 0]} marker={[speakerPosition[0], 1.95, speakerPosition[2]]}><Speaker active={props.selected === 'music' && props.contentReady} {...props} /></Target>
-      <Target {...targetProps} id="writing" position={[0, 0, 0]} marker={[paperPosition[0], .95, paperPosition[2] + .15]}><ArticlePapers dark={props.dark} active={props.selected === 'writing' && props.contentReady} motion={props.motion} reducedMotion={props.reducedMotion} /></Target>
+      <Target {...targetProps} id="writing" position={[0, 0, 0]} marker={[paperPosition[0], .95, paperPosition[2] + .15]}><ArticlePapers nativeReader={props.nativeWriting} index={props.writingIndex} onIndex={props.onWritingIndex} dark={props.dark} active={props.selected === 'writing' && props.contentReady} motion={props.motion} reducedMotion={props.reducedMotion} /></Target>
       <Target {...targetProps} id="contact" position={[0, 0, 0]} marker={[cardPoses.rest[0], -1.3, cardPoses.rest[2] + .05]}><HangingCard dark={props.dark} selected={props.selected === 'contact'} active={props.selected === 'contact' && props.contentReady} motion={props.motion} reducedMotion={props.reducedMotion} /></Target>
       <group position={deskControlPosition}><Plate size={[.72, .23, .15]} radius={.045} color="#dcdcdc" ink="#777777" /><Face kind={props.standing ? 'height' : 'height-seated'} position={[-.16, 0, .077]} size={[.2, .14]} /><Stroke points={[[.06, 0, .078], [.13, .045, .078], [.2, 0, .078]]} /><Stroke points={[[.22, .035, .078], [.29, -.01, .078], [.35, .035, .078]]} /></group>
     </group>

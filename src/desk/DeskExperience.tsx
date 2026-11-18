@@ -14,6 +14,7 @@ import { TifaConversation } from './TifaConversation'
 import { DeskNavigation } from './DeskNavigation'
 import { DeskSound } from './DeskSound'
 import type { TifaSource } from './tifaAnswers'
+import { NativeWritingReader, useNativePaper } from './NativeWritingReader'
 
 const DeskScene = lazy(() => import('./DeskScene'))
 
@@ -31,6 +32,8 @@ function SceneSkeleton() {
 export default function DeskExperience() {
   const [route, setRoute] = useState(readLocation)
   const chat = useTifaChat()
+  const nativeWriting = useNativePaper()
+  const [writingIndex, setWritingIndex] = useState(0)
   const [projectRequest,setProjectRequest] = useState<{id:string;revision:number;article?:boolean}|null>(null)
   const [openingMode, setOpeningMode] = useState<OpeningMode>(() => {
     let seen = false
@@ -176,7 +179,7 @@ export default function DeskExperience() {
       </div>}
 
       <div ref={sceneSurface} onClick={event => { if (failed && focused && event.target === event.currentTarget) onDismiss() }} className="scene-layer absolute inset-0" aria-label="Interactive 3D desk. Drag to look around or choose an object from the navigation.">
-        {!failed && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene onDismiss={onDismiss} chatOpen={chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
+        {!failed && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
         {!ready && !failed && <SceneSkeleton />}
         {failed && !chatOpen && <div className="absolute inset-x-6 top-[45%] mx-auto max-w-sm border-y border-zinc-300 py-7 text-center"><p className="text-lg">The desk couldn't be drawn.</p><p className="mt-3 text-sm leading-relaxed text-zinc-500">You can still explore every section using the navigation below.</p><button onClick={() => { setFailed(false); setReady(false); setSceneKey(v => v + 1) }} className="mt-4 min-h-11 font-mono text-xs underline underline-offset-4">try loading again</button></div>}
       </div>
@@ -189,6 +192,8 @@ export default function DeskExperience() {
       </div>}
 
       {!focused && <div role="group" aria-label="Desk view controls" className="reset-view absolute bottom-[141px] right-5 z-[4] flex items-center md:bottom-[129px] md:right-10"><button disabled={opening || failed} aria-label="Zoom out on desk" title="Zoom out (−)" onClick={() => setZoomStep(v => v - 1)} className="flex size-11 items-center justify-center text-zinc-500 active:scale-[.98]"><MagnifyingGlassMinus size={16} /></button><button disabled={opening || failed} aria-label="Zoom in on desk" title="Zoom in (+)" onClick={() => setZoomStep(v => v + 1)} className="flex size-11 items-center justify-center text-zinc-500 active:scale-[.98]"><MagnifyingGlassPlus size={16} /></button><button disabled={opening} aria-label="Reset view" className="flex min-h-11 min-w-11 items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[.08em] text-zinc-500 active:scale-[.98]" onClick={() => setReset(v => v + 1)}><ArrowCounterClockwise size={16} /><span className="hidden sm:inline">reset view</span></button></div>}
+
+      {nativeWriting && selected === 'writing' && !failed && <NativeWritingReader index={writingIndex} onSelect={setWritingIndex} dark={dark} surface={sceneSurface} />}
 
       <TifaConversation open={chatOpen} chat={chat} surface={sceneSurface} onSource={onTifaSource} fallback={failed} />
 

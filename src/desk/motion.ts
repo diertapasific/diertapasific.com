@@ -27,7 +27,10 @@ export const createDeskMotion = (): DeskMotion => ({ id: null, progress: 0 })
 // point: reverse the current path, return fully, then open the latest selection.
 export function advanceDeskMotion(state: DeskMotion, requested: Destination | null, delta: number, reducedMotion: boolean) {
   if (reducedMotion) { state.id = requested; state.progress = requested ? 1 : 0; return }
-  const blend = 1 - Math.exp(-7 * Math.min(Math.max(delta, 0), .05))
+  // Exponential easing stays stable across long frames. Capping at 50ms
+  // made Safari need dozens of slow frames just to release a focused object.
+  const elapsed = Number.isFinite(delta) ? Math.min(Math.max(delta, 0), 1) : 0
+  const blend = 1 - Math.exp(-7 * elapsed)
   if (state.id !== requested) {
     // These screens are fixed in their housings; nothing has to fold away.
     state.progress = state.id === 'projects' || state.id === 'music' ? 0 : state.progress * (1 - blend)
