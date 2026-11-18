@@ -159,9 +159,6 @@ html.desk-page body { position: fixed; inset: 0; }
 
 /* These faces remain attached while the physical ID turns. */
 .contact-card { animation: none; }
-/* A quiet caption for the miniature, without a numbered object label. */
-.miniature-cue { opacity: 0; transform: translate(-50%, 2px); transition: opacity .25s, transform .25s cubic-bezier(.16,1,.3,1); }
-.miniature-cue.is-visible, .miniature-trigger:not(.is-mobile):hover .miniature-cue, .miniature-trigger:focus-visible .miniature-cue { opacity: .75; transform: translate(-50%, 0); }
 .miniature-trigger:active { transform: scale(.98); }
 
 
