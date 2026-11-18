@@ -9,7 +9,7 @@ const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 export function createTifaHandler(env, notes, articles, { fetcher = fetch, store = createCloudStore(env, fetcher) } = {}) {
   return async request => {
     const origin = new URL(request.url).origin
-    const runtime = { GROQ_API_KEY: env.GROQ_API_KEY, GROQ_MODEL: env.GROQ_MODEL, ALLOWED_ORIGIN: origin }
+    const runtime = { GROQ_API_KEY: env.GROQ_API_KEY, GROQ_MODEL: env.GROQ_MODEL, GROQ_FALLBACK_MODEL: env.GROQ_FALLBACK_MODEL, ALLOWED_ORIGIN: origin }
     if (request.method !== 'POST' || request.headers.get('Origin') && request.headers.get('Origin') !== origin || !request.headers.get('Content-Type')?.includes('application/json') || !env.GROQ_API_KEY) {
       return handleTifa(request, runtime, notes, fetcher, articles)
     }

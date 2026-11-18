@@ -1,13 +1,16 @@
+import { profileReply } from '../../server/tifaConversation.mjs'
 export type TifaSource = { label: string; destination: 'projects' | 'about' | 'reading' | 'music' | 'writing' | 'contact'; section?: 'intro' | 'experience' | 'education'; projectId?: string; articleId?: string }
 export type TifaNote = { id: string; terms: string[]; answer: string; detail?: string; sources: TifaSource[]; followups?: string[] }
 export type TifaAnswer = { text: string; topic: string | null; sources: TifaSource[]; followups: string[] }
 
 export const normalizeQuestion = (text: string) => text.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[’']/g, '').replace(/[^a-z0-9]+/g, ' ').trim()
 const contains = (text: string, term: string) => ` ${text} `.includes(` ${normalizeQuestion(term)} `)
-const followup = (q: string) => /^(tell me more|more|go on|and then|what else|how does it work|what about it|what did he learn|what has he learnt|what tech does it use|what stack does it use|how did he build it)( about (it|that|this))?$/.test(q)
+const followup = (q: string) => /^(since when|how long|tell me more|more|go on|and then|what else|how does it work|what about it|what did he learn|what has he learnt|what tech does it use|what stack does it use|how did he build it)( about (it|that|this))?$/.test(q)
 const contact: TifaSource = { label: 'ask Dipa directly', destination: 'contact' }
 
 export function answerTifa(question: string, notes: TifaNote[], previousTopic: string | null = null): TifaAnswer {
+  const known = profileReply([{ role: 'user', content: question }], notes, previousTopic)
+  if (known) return known
   const q = normalizeQuestion(question.slice(0, 500))
   const result = (note: TifaNote, more = false): TifaAnswer => ({ text: more && note.detail ? note.detail : note.answer, topic: note.id, sources: note.sources, followups: note.followups ?? ['Tell me more', 'Show me his projects'] })
   // These details are intentionally absent from the public profile.

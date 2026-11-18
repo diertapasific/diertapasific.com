@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { answerTifa } from './tifaAnswers'
+import { profileReply } from '../../server/tifaConversation.mjs'
 import type { TifaAnswer } from './tifaAnswers'
 import { tifaNotes } from './tifaKnowledge'
 import { requestTifa, TifaServiceError, tifaUnavailableMessage } from './tifaTransport'
@@ -32,13 +33,19 @@ export function useTifaChat() {
     const next: TifaMessage[] = retry ? previous : [...previous, { id: ++sequence.current, role: 'user', text }]
     publish(next)
     const history: ChatTurn[] = next.slice(-11).map(message => ({ role: message.role === 'user' ? 'user' : 'assistant', content: message.text.slice(0, message.role === 'user' ? 500 : 2000) }))
+    const known = profileReply(history, tifaNotes, topic.current)
+    if (known) {
+      topic.current = known.topic; setMode('notes')
+      publish([...next, { id: ++sequence.current, role: 'tifa', text: known.text, answer: known, source: 'notes' }])
+      pending.current = false; request.current = null; setReplying(false); return true
+    }
     const timer = window.setTimeout(() => controller.abort(), 17000)
     try {
       if (Date.now() < cooldown.current && (!retry || lastFailure.current === 'rate_limited')) throw new TifaServiceError('cooldown')
       const answer = await requestTifa(endpoint, history, controller.signal)
       if (generation.current !== current) return true
-      topic.current = answer.topic?.replace(/^article:(0[1-4])$/, 'project:$1') || null; cooldown.current = 0; setMode('groq')
-      publish([...next, { id: ++sequence.current, role: 'tifa', text: answer.text, answer, source: 'groq' }])
+      topic.current = answer.topic?.replace(/^article:(0[1-4])$/, 'project:$1') || null; cooldown.current = 0; setMode(answer.source === 'profile' ? 'notes' : 'groq')
+      publish([...next, { id: ++sequence.current, role: 'tifa', text: answer.text, answer, source: answer.source === 'profile' ? 'notes' : 'groq' }])
     } catch (error) {
       if (generation.current !== current) return true
       const answer = answerTifa(text, tifaNotes, topic.current)
