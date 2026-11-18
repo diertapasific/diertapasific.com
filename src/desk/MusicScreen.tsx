@@ -32,10 +32,12 @@ const TrackProgress = memo(function TrackProgress({ snapshot, compact }: { snaps
 })
 
 function Cover({ src, album, compact, dense }: { src: string | null; album: string; compact: boolean; dense: boolean }) {
-  const [failed, setFailed] = useState(false)
-  useEffect(() => setFailed(false), [src])
-  return <span className={`grid shrink-0 place-items-center ${dense ? 'size-7' : compact ? 'size-10' : 'size-16'}`}>
-    {src && !failed ? <img src={src} alt={album ? `Cover of ${album}` : 'Album artwork'} className="size-full object-contain" referrerPolicy="no-referrer" decoding="async" onError={() => setFailed(true)} /> : <MusicNotes size={compact ? 23 : 38} weight="thin" className="text-[var(--music-muted)]" />}
+  const [failed, setFailed] = useState(false), [loaded, setLoaded] = useState(false)
+  const image = useRef<HTMLImageElement>(null)
+  useEffect(() => { setFailed(false); setLoaded(Boolean(image.current?.complete && image.current.naturalWidth)) }, [src])
+  return <span className={`relative grid shrink-0 place-items-center ${dense ? 'size-7' : compact ? 'size-10' : 'size-16'}`}>
+    <MusicNotes aria-hidden={Boolean(src && !failed)} size={compact ? 23 : 38} weight="thin" className="text-[var(--music-muted)]" />
+    {src && !failed && <img ref={image} src={src} alt={album ? `Cover of ${album}` : 'Album artwork'} className="music-cover absolute inset-0 size-full object-contain" data-loaded={loaded || undefined} referrerPolicy="no-referrer" decoding="async" onLoad={() => setLoaded(true)} onError={() => setFailed(true)} />}
   </span>
 }
 
@@ -49,7 +51,7 @@ export function MusicScreen({ compact, dense = false, dark = false, artwork = tr
   const hasProgress = track && !snapshot.stale && (snapshot.status === 'playing' || snapshot.status === 'paused')
   const body = <>
     <header className={`flex shrink-0 items-center justify-between gap-2 border-b border-[var(--music-border)] px-3 font-mono ${dense ? 'h-4 text-[7px]' : compact ? 'h-5 text-[7px]' : 'h-6 text-[8px]'}`}><span>LISTENING</span><span className="flex items-center gap-1.5 text-[var(--music-secondary)]">{playing && <i aria-hidden="true" className="size-1 shrink-0 animate-pulse rounded-full bg-[var(--music-ink)]" />}{status}</span></header>
-    <div className={`flex min-h-0 flex-1 items-center gap-3 ${compact ? 'px-3 py-1' : 'px-4 py-3'}`}>
+    <div key={track?.id || snapshot.status} className={`music-content-enter flex min-h-0 flex-1 items-center gap-3 ${compact ? 'px-3 py-1' : 'px-4 py-3'}`}>
       {snapshot.status === 'loading' ? <div role="status" aria-label="Loading Spotify listening status" className="flex w-full items-center gap-3"><div className={`${dense ? 'size-7' : compact ? 'size-10' : 'size-16'} shrink-0 animate-pulse bg-[var(--music-skeleton)]`} /><div className="min-w-0 flex-1 space-y-2"><div className="h-3 w-4/5 animate-pulse bg-[var(--music-skeleton)]" /><div className="h-2 w-1/2 animate-pulse bg-[var(--music-skeleton)]" /></div></div> : <>
         <Cover src={artwork ? track?.artwork || null : null} album={track?.album || ''} compact={compact} dense={dense} />
         <div className="min-w-0 flex-1">
