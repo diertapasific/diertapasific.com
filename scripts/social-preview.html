@@ -21,7 +21,8 @@
       .share-description { position: absolute; top: 335px; margin: 0; font-size: 18px; line-height: 1.55; color: #676767; }
       .share-url { position: absolute; bottom: 42px; margin: 0; padding-top: 16px; width: 302px; border-top: 1px solid #c8c8c8; font: 10px 'JetBrains Mono', monospace; letter-spacing: .4px; color: #676767; }
       .share-index { position: absolute; top: 48px; right: 48px; margin: 0; font: 9px 'JetBrains Mono', monospace; letter-spacing: 1px; color: #777777; }
-      .object-label, .miniature-trigger, [data-mobile-annotations], .surface-music { display: none !important; }
+      .object-label, .miniature-trigger, .tifa-trigger, [data-mobile-annotations], .surface-music { display: none !important; }
+      body > .scene-surface-portal { margin-left: 280px; }
     </style>
   </head>
   <body>
@@ -30,11 +31,11 @@
       <div class="share-copy">
         <div class="share-brand"><strong>dipa</strong><span>/</span></div>
         <p class="share-eyebrow">a personal space</p>
-        <h1 class="share-title">a work in<br />progress.</h1>
+        <h1 class="share-title">simply<br />lovely.</h1>
         <p class="share-description">engineer. builder.<br />curious human.</p>
-        <p class="share-url">diertapasific.github.io</p>
+        <p class="share-url">diertapasific.com</p>
       </div>
-      <p class="share-index">PROJECTS / WRITING / READING</p>
+      <p class="share-index">PROJECTS / IDEAS / TIFA</p>
     </main>
     <script type="module">
       import React from 'react'
@@ -47,6 +48,9 @@
       const noop = () => {}
       await document.fonts.ready
       createRoot(surface).render(React.createElement(DeskScene, {
+        browserVisible: true, keepRenderer: false, readingPaused: false, onParkedLoss: noop,
+        readingFrame: null, onReadingFrame: noop, nativeWriting: false, writingIndex: 0, onWritingIndex: noop,
+        onDismiss: noop, chatOpen: false, onAsk: noop, replyPulse: 0, projectRequest: null, zoomStep: 0,
         dark: false, selected: null, onSelect: noop, aboutSection: 'intro', onAboutSection: noop,
         standing: true, surface: { current: surface }, reducedMotion: true, reset: 0,
         openingMode: 'none', onOpeningComplete: noop,

@@ -13,7 +13,7 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 Put local credentials in ignored `.env.local`; use `.env.example` for variable names. Never prefix private credentials with `VITE_`. The local Vite middleware serves `/api/tifa` and `/api/spotify/now-playing`.
 
-For local Spotify authorization, register `http://127.0.0.1:5173/api/spotify/callback` in the Spotify Developer app, then open `http://127.0.0.1:5173/api/spotify/connect`. Only currently-playing and recently-played read scopes are requested, using PKCE. The private refresh token stays in ignored `.spotify/connection.json`. Do not upload that folder. Without a public proxy, the local server polls every 15 seconds and preserves the last observed track. After production is connected, set local `SPOTIFY_PUBLIC_STATUS_URL=https://diertapasific.vercel.app/api/spotify/now-playing` to reuse the cloud snapshot and stop independent local token refreshes. Leave that value empty when deliberately authorizing a separate local connection.
+For local Spotify authorization, register `http://127.0.0.1:5173/api/spotify/callback` in the Spotify Developer app, then open `http://127.0.0.1:5173/api/spotify/connect`. Only currently-playing and recently-played read scopes are requested, using PKCE. The private refresh token stays in ignored `.spotify/connection.json`. Do not upload that folder. Without a public proxy, the local server polls every 15 seconds and preserves the last observed track. After production is connected, set local `SPOTIFY_PUBLIC_STATUS_URL=https://www.diertapasific.com/api/spotify/now-playing` to reuse the cloud snapshot and stop independent local token refreshes. Leave that value empty when deliberately authorizing a separate local connection.
 
 ## Vercel
 
@@ -37,13 +37,12 @@ Configure **Production** variables before redeploying:
 | `GROQ_MODEL` | Config | Primary model; defaults to `openai/gpt-oss-20b` |
 | `GROQ_FALLBACK_MODEL` | Config | Optional override; defaults to `openai/gpt-oss-120b` (empty disables it) |
 | `UPSTASH_REDIS_REST_URL` or `KV_REST_API_URL` | Config | Redis REST endpoint |
-| `SITE_URL` | Config | Canonical production URL, including `https://` |
 
 Secrets are runtime-only; none belong in frontend variables, source archives or Git. Configure separate credentials and a separate Redis namespace for Preview environments before enabling their backend. There is no public production Spotify authorization route. Reconnect privately if Spotify revokes the account's refresh token.
 
 The deployed speaker updates through Vercel when visited, including while the laptop is off. When the site was idle, a newer Spotify history entry can replace an older observed song; older history cannot overwrite a newer observation. Spotify may delay history updates, so the UI distinguishes current playback, last seen and unavailable states. This is not a continuous listening archive.
 
-`SITE_URL` controls canonical/social metadata during the build. Update it and redeploy when adding a custom domain. `VERCEL_PROJECT_PRODUCTION_URL` is used as a fallback on Vercel. The original GitHub Pages URL is the local fallback.
+The public canonical address, `https://www.diertapasific.com`, is tracked in `vite.config.ts` and used for canonical/social metadata in every build. This keeps Preview deployments and old hosting environment values from changing shared links. Update that address and redeploy when changing the production domain.
 
 The Vercel project is connected to the personal GitHub repository. Pull requests create Preview deployments; merging into `main` deploys Production. The `Portfolio checks` workflow runs the regression suite, compiled Node handler check, frontend build and retained Worker build. Preview backends remain unconfigured until separate secrets/storage are explicitly added. Changing Vercel environment variables requires a redeployment. The `portfolio-v1` tag preserves the site before the desk redesign.
 

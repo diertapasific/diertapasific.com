@@ -208,7 +208,7 @@ export default function DeskExperience() {
 
       <div aria-hidden={focused || undefined} className={`desk-intro ${focused ? 'is-away' : ''} pointer-events-none absolute left-5 top-[112px] z-[4] md:left-10 md:top-[134px]`}>
         <p className="eyebrow mb-4">a few things that make me, me.</p>
-        <h1 className="text-[32px] font-normal leading-[1.08] tracking-[-.055em] md:text-[44px]">a work in progress.</h1>
+        <h1 className="text-[32px] font-normal leading-[1.08] tracking-[-.055em] md:text-[44px]">simply lovely.</h1>
         <p className="mt-4 text-sm leading-relaxed text-zinc-500">engineer. builder. curious human.<br /><span className="text-zinc-700">take a look around.</span></p>
       </div>
 
