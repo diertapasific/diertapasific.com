@@ -6,8 +6,12 @@ export const destinations = [
   { id: 'reading', number: '03', label: 'reading', object: 'the book stack', subtitle: 'Ideas that stay with me.' },
   { id: 'music', number: '04', label: 'listening', object: 'the speaker', subtitle: 'What I’m listening to.' },
   { id: 'writing', number: '05', label: 'writing', object: 'the loose pages', subtitle: 'Notes from building things.' },
-  { id: 'contact', number: '06', label: 'say hello', object: 'the hanging ID', subtitle: 'The start of a conversation.' },
+  { id: 'contact', number: '06', label: 'say hello', object: 'the desk ID', subtitle: 'The start of a conversation.' },
 ] as const
+
+// Only placed objects appear in the dock. The legacy Writing route remains
+// addressable, while its pile is absent from the desk overview.
+export const deskDestinations = destinations.filter(item => item.id !== 'writing')
 
 export type Destination = typeof destinations[number]['id']
 export type AboutSection = 'intro' | 'experience' | 'education'

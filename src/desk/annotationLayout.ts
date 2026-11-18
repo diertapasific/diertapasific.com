@@ -48,7 +48,7 @@ export function layoutAttachedAnnotations(frames: AnnotationFrame[], chrome: Scr
   const orders = [anchors.map((_, i) => i), anchors.map((_, i) => i).reverse(), [3, 0, 2, 1, 4, 5], [0, 3, 1, 2, 5, 4]]
   for (const order of orders) {
     const placed: ScreenPoint[] = []
-    for (const index of order) {
+    for (const index of order.filter(index => index < anchors.length)) {
       const next = rankings[index].find(offset => placed.every((other, j) => !other || frames.every(frame => {
         const a = annotationRect({ x: frame.anchors[index].x + offset.x, y: frame.anchors[index].y + offset.y })
         const b = annotationRect({ x: frame.anchors[j].x + other.x, y: frame.anchors[j].y + other.y })

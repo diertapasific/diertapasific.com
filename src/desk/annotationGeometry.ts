@@ -1,4 +1,5 @@
-import { bookPoses, cardPoses, deskmatPosition, keyboardPosition, monitorDepth, mousePosition, paperPosition, speakerPosition } from './motion'
+import { bookPoses, deskmatPosition, keyboardPosition, monitorDepth, mousePosition, speakerPosition } from './motion'
+import { tableBadgeRest, tableBadgeRestScale } from './tableBadgeLayout'
 import type { Destination, Point } from './model'
 
 type AnnotationObject = { id: Destination; anchor: Point; center: Point; size: Point }
@@ -7,8 +8,7 @@ export const annotationObjects: AnnotationObject[] = [
   { id: 'about', anchor: [bookPoses.about.rest[0], .28, bookPoses.about.rest[2]], center: [bookPoses.about.rest[0], .22, bookPoses.about.rest[2]], size: [1.55, .25, 1.85] },
   { id: 'reading', anchor: [bookPoses.reading.rest[0], .56, bookPoses.reading.rest[2]], center: [bookPoses.reading.rest[0], .29, bookPoses.reading.rest[2]], size: [1.55, .56, 1.85] },
   { id: 'music', anchor: [speakerPosition[0], 1.25, speakerPosition[2]], center: [speakerPosition[0], .67, speakerPosition[2]], size: [1.15, 1.15, .55] },
-  { id: 'writing', anchor: [paperPosition[0], .25, paperPosition[2]], center: [paperPosition[0], .16, paperPosition[2]], size: [1.65, .26, 1.85] },
-  { id: 'contact', anchor: [cardPoses.rest[0], cardPoses.rest[1], cardPoses.rest[2] + .08], center: cardPoses.rest, size: [.76, 1.08, .16] },
+  { id: 'contact', anchor: [tableBadgeRest[0], tableBadgeRest[1] + .03, tableBadgeRest[2]], center: [tableBadgeRest[0], tableBadgeRest[1] + .06 * tableBadgeRestScale, tableBadgeRest[2] - .52 * tableBadgeRestScale], size: [1.56 * tableBadgeRestScale, .2 * tableBadgeRestScale, 2.08 * tableBadgeRestScale] },
 ]
 
 export const annotationObstacles: { center: Point; size: Point }[] = [

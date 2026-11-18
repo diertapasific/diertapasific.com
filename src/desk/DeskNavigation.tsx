@@ -3,7 +3,7 @@
 import { memo } from 'react'
 import { Monitor, Notebook, Books, SpeakerHigh, Article, IdentificationBadge } from '@phosphor-icons/react'
 import type { Icon } from '@phosphor-icons/react'
-import { destinations } from './model'
+import { deskDestinations } from './model'
 import type { Destination } from './model'
 
 const objects: Record<Destination, Icon> = {
@@ -20,8 +20,8 @@ export const DeskNavigation = memo(function DeskNavigation({ selected, disabled,
   disabled: boolean
   onSelect: (destination: Destination) => void
 }) {
-  return <nav aria-label="Desk destinations" className="desk-dock pointer-events-auto mx-auto grid w-full max-w-[580px] grid-cols-6 gap-0.5 rounded-[14px] border border-[#cecece] bg-[#f6f6f6] p-1 sm:gap-1 sm:p-1.5">
-    {destinations.map(item => {
+  return <nav aria-label="Desk destinations" className="desk-dock pointer-events-auto mx-auto grid w-full max-w-[580px] grid-cols-5 gap-0.5 rounded-[14px] border border-[#cecece] bg-[#f6f6f6] p-1 sm:gap-1 sm:p-1.5">
+    {deskDestinations.map(item => {
       const ObjectIcon = objects[item.id]
       const active = selected === item.id
       return <button key={item.id} type="button" disabled={disabled} data-destination={item.id}
