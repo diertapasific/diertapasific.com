@@ -29,11 +29,12 @@ import { tifaView } from './tifaView'
 import { DeskBackdrop } from './DeskBackdrop'
 import { FocusDismiss } from './SceneFocusDismiss'
 import { advanceCameraMotion, createCameraMotion } from './cameraMotion'
+import { SceneDevProbe } from './SceneDevTools'
 
 type SceneProps = {
   nativeWriting: boolean; writingIndex: number; onWritingIndex: (index: number) => void;
   dark: boolean; selected: Destination | null; onSelect: (id: Destination) => void; aboutSection: AboutSection; onAboutSection: (section: AboutSection) => void;
-  reducedMotion: boolean; reset: number; zoomStep: number; standing: boolean; surface: RefObject<HTMLDivElement>; onReady: () => void; onFailure: () => void;
+  reducedMotion: boolean; reset: number; zoomStep: number; standing: boolean; surface: RefObject<HTMLDivElement>; onReady: () => void; onFailure: (reason: 'context-lost' | 'load-timeout' | 'render-error') => void;
   openingMode: OpeningMode; onOpeningComplete: () => void; onDismiss: () => void;
   chatOpen?: boolean; onAsk?: () => void; replyPulse?: number; projectRequest?: {id:string;revision:number;article?:boolean}|null;
 }
@@ -219,8 +220,8 @@ function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, o
 function Ready({ onReady, onFailure }: Pick<SceneProps, 'onReady' | 'onFailure'>) {
   const { gl } = useThree()
   useEffect(() => {
-    onReady()
-    const lost = (event: Event) => { event.preventDefault(); onFailure() }
+    if (!(import.meta.env.DEV && new URLSearchParams(window.location.search).get('scene-checks') === 'timeout')) onReady()
+    const lost = (event: Event) => { event.preventDefault(); onFailure('context-lost') }
     gl.domElement.addEventListener('webglcontextlost', lost)
     return () => gl.domElement.removeEventListener('webglcontextlost', lost)
   }, [gl, onReady, onFailure])
@@ -243,10 +244,28 @@ function AnimatedDesk(props: SceneProps & { annotationPlan: MutableRefObject<Ann
 
 export default function DeskScene(props: SceneProps) {
   const { orbit, suppressClickUntil } = useDeskDrag(props.surface, !props.selected && !props.chatOpen && props.openingMode === 'none', props.reset, props.zoomStep)
+  const reading = props.nativeWriting && props.selected === 'writing'
+  const [parked, setParked] = useState(false)
+  useEffect(() => {
+    setParked(false)
+    if (!reading) return
+    let timer = 0
+    // Retain the scene, allow the previous object and camera to settle, then
+    // stop continuously drawing the static reading background. Resizing wakes
+    // the camera so rotation and Safari toolbar changes still fit the paper.
+    const wake = () => {
+      window.clearTimeout(timer); setParked(false)
+      timer = window.setTimeout(() => setParked(true), 2400)
+    }
+    wake(); window.addEventListener('resize', wake)
+    return () => { window.clearTimeout(timer); window.removeEventListener('resize', wake) }
+  }, [reading])
+
   const motion = useRef(createDeskMotion())
   const opening = useRef(createOpeningTimeline(props.openingMode))
   const annotationPlan = useRef<AnnotationPlan | null>(null)
-  return <Canvas flat orthographic camera={{ position: [8, 8, 12], zoom: 70, near: .1, far: 100 }} dpr={[1, 2]} gl={{ antialias: true, alpha: true, localClippingEnabled: true }}>
+  return <Canvas data-scene-loop={reading && parked ? 'demand' : 'always'} frameloop={reading && parked ? 'demand' : 'always'} flat orthographic camera={{ position: [8, 8, 12], zoom: 70, near: .1, far: 100 }} dpr={[1, props.nativeWriting ? 1.25 : 2]} gl={{ antialias: !props.nativeWriting, alpha: true, localClippingEnabled: true }}>
+    {import.meta.env.DEV && new URLSearchParams(window.location.search).has('scene-checks') && <SceneDevProbe />}
     <FocusDismiss focus={props.openingMode === 'none' ? props.chatOpen ? 'tifa' : props.selected : null} onDismiss={props.onDismiss} />
     <AnimatedDesk {...props} opening={opening} annotationPlan={annotationPlan} motion={motion} orbit={orbit} suppressClickUntil={suppressClickUntil} />
   </Canvas>

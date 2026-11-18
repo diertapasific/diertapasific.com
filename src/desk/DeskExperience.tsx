@@ -15,6 +15,8 @@ import { DeskNavigation } from './DeskNavigation'
 import { DeskSound } from './DeskSound'
 import type { TifaSource } from './tifaAnswers'
 import { NativeWritingReader, useNativePaper } from './NativeWritingReader'
+import { SceneDevTools } from './SceneDevTools'
+import { writingReaderAvailable } from './nativePaperLayout'
 
 const DeskScene = lazy(() => import('./DeskScene'))
 
@@ -42,7 +44,8 @@ export default function DeskExperience() {
     return initialOpeningMode(initial.destination||initial.companion, seen, window.matchMedia('(prefers-reduced-motion: reduce)').matches)
   })
   const [ready, setReady] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [failure, setFailure] = useState<'context-lost' | 'load-timeout' | 'render-error' | null>(null)
+  const failed = failure !== null
   const [reset, setReset] = useState(0)
   const [zoomStep, setZoomStep] = useState(0)
   const standing = true, reducedMotion = false
@@ -55,11 +58,15 @@ export default function DeskExperience() {
   const heading = useRef<HTMLHeadingElement>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const selected = route.destination
+  const writingOpen = writingReaderAvailable(selected, nativeWriting, failed)
   const chatOpen=Boolean(route.companion),focused=Boolean(selected)||chatOpen
   const opening = openingMode !== 'none' && !failed
   const active = destinations.find(item => item.id === selected)
   const onReady = useCallback(() => setReady(true), [])
-  const onFailure = useCallback(() => { setFailed(true); setReady(false); setOpeningMode('none') }, [])
+  const onFailure = useCallback((reason: 'context-lost' | 'load-timeout' | 'render-error' = 'render-error') => {
+    console.warn('desk_scene_failed', reason)
+    setFailure(reason); setReady(false); setOpeningMode('none')
+  }, [])
   const onOpeningComplete = useCallback(() => {
     try { sessionStorage.setItem(openingSessionKey, 'true') } catch { /* Arrival does not depend on persistence. */ }
     setOpeningMode('none')
@@ -155,12 +162,13 @@ export default function DeskExperience() {
   }, [navigate, selected, opening,chatOpen])
   useEffect(() => {
     if (ready || failed) return
-    const timer = window.setTimeout(onFailure, 20000)
+    const timer = window.setTimeout(() => onFailure('load-timeout'), 20000)
     return () => window.clearTimeout(timer)
   }, [ready, failed, onFailure, sceneKey])
 
   return <IconContext.Provider value={{ weight: 'light', size: 18 }}>
-    <main data-theme={dark ? 'dark' : 'light'} data-opening={openingMode} aria-busy={opening || undefined} className={`desk-app relative min-h-[100dvh] w-full overflow-hidden bg-[#f6f6f6] text-[#2a2a2a] ${opening ? 'is-opening' : ''} ${focused ? 'has-selection' : ''} ${chatOpen?'has-chat':''} ${selected === 'about' || selected === 'reading' ? 'has-book' : ''} ${reducedMotion ? 'reduce-motion' : ''}`}>
+    {import.meta.env.DEV && new URLSearchParams(window.location.search).has('scene-checks') && <SceneDevTools />}
+    <main data-theme={dark ? 'dark' : 'light'} data-opening={openingMode} data-scene-failure={failure || undefined} aria-busy={opening || undefined} className={`desk-app relative min-h-[100dvh] w-full overflow-hidden bg-[#f6f6f6] text-[#2a2a2a] ${opening ? 'is-opening' : ''} ${focused ? 'has-selection' : ''} ${chatOpen?'has-chat':''} ${selected === 'about' || selected === 'reading' ? 'has-book' : ''} ${reducedMotion ? 'reduce-motion' : ''}`}>
       {!opening && <a href="#desk-index" className="skip-link">skip to navigation</a>}
       <header className="desk-header absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-5 md:px-10 md:py-7">
         <button disabled={opening} onClick={() => navigate(null)} className="flex min-h-11 items-center gap-3 text-[25px] tracking-[-.06em] active:scale-[.98]" aria-label="Dipa's desk, return home">dipa <span className="font-light text-zinc-400">/</span></button>
@@ -181,23 +189,23 @@ export default function DeskExperience() {
       <div ref={sceneSurface} onClick={event => { if (failed && focused && event.target === event.currentTarget) onDismiss() }} className="scene-layer absolute inset-0" aria-label="Interactive 3D desk. Drag to look around or choose an object from the navigation.">
         {!failed && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
         {!ready && !failed && <SceneSkeleton />}
-        {failed && !chatOpen && <div className="absolute inset-x-6 top-[45%] mx-auto max-w-sm border-y border-zinc-300 py-7 text-center"><p className="text-lg">The desk couldn't be drawn.</p><p className="mt-3 text-sm leading-relaxed text-zinc-500">You can still explore every section using the navigation below.</p><button onClick={() => { setFailed(false); setReady(false); setSceneKey(v => v + 1) }} className="mt-4 min-h-11 font-mono text-xs underline underline-offset-4">try loading again</button></div>}
+        {failed && !chatOpen && !writingOpen && <div className="absolute inset-x-6 top-[45%] mx-auto max-w-sm border-y border-zinc-300 py-7 text-center"><p className="text-lg">The desk couldn't be drawn.</p><p className="mt-3 text-sm leading-relaxed text-zinc-500">You can still explore every section using the navigation below.</p><button onClick={() => { setFailure(null); setReady(false); setSceneKey(v => v + 1) }} className="mt-4 min-h-11 font-mono text-xs underline underline-offset-4">try loading again</button></div>}
       </div>
 
       {!focused && <div className="desk-instructions pointer-events-none absolute bottom-[143px] left-5 z-[4] md:bottom-[129px] md:left-10"><div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[.1em] text-zinc-500"><ArrowsOutCardinal size={16} className="hidden sm:block" /><span className="hidden sm:inline">drag to look / scroll to zoom</span><span className="text-[9px] sm:hidden">drag / pinch to zoom</span></div><p className="mt-2 hidden font-mono text-[10px] text-zinc-400 sm:block">click an object to get closer</p></div>}
 
-      {focused && (!failed||chatOpen) && <div className="focus-toolbar pointer-events-none absolute inset-x-5 top-[82px] z-10 flex items-center justify-between md:inset-x-10 md:top-[94px]">
+      {focused && (!failed||chatOpen||writingOpen) && <div className="focus-toolbar pointer-events-none absolute inset-x-5 top-[82px] z-10 flex items-center justify-between md:inset-x-10 md:top-[94px]">
         <button onClick={() => navigate(null)} className="pointer-events-auto flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap bg-[#f6f6f6]/90 px-2 font-mono text-[11px] active:scale-[.98]"><ArrowLeft size={16} />back to desk<span className="ml-3 hidden text-[9px] text-zinc-400 md:inline">ESC</span></button>
         <span className="font-mono text-[10px] text-zinc-500">{chatOpen?'Tifa / desk companion':`${active?.number} / ${active?.object}`}</span>
       </div>}
 
       {!focused && <div role="group" aria-label="Desk view controls" className="reset-view absolute bottom-[141px] right-5 z-[4] flex items-center md:bottom-[129px] md:right-10"><button disabled={opening || failed} aria-label="Zoom out on desk" title="Zoom out (−)" onClick={() => setZoomStep(v => v - 1)} className="flex size-11 items-center justify-center text-zinc-500 active:scale-[.98]"><MagnifyingGlassMinus size={16} /></button><button disabled={opening || failed} aria-label="Zoom in on desk" title="Zoom in (+)" onClick={() => setZoomStep(v => v + 1)} className="flex size-11 items-center justify-center text-zinc-500 active:scale-[.98]"><MagnifyingGlassPlus size={16} /></button><button disabled={opening} aria-label="Reset view" className="flex min-h-11 min-w-11 items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[.08em] text-zinc-500 active:scale-[.98]" onClick={() => setReset(v => v + 1)}><ArrowCounterClockwise size={16} /><span className="hidden sm:inline">reset view</span></button></div>}
 
-      {nativeWriting && selected === 'writing' && !failed && <NativeWritingReader index={writingIndex} onSelect={setWritingIndex} dark={dark} surface={sceneSurface} />}
+      {writingOpen && <NativeWritingReader fallback={failed} index={writingIndex} onSelect={setWritingIndex} dark={dark} surface={sceneSurface} />}
 
       <TifaConversation open={chatOpen} chat={chat} surface={sceneSurface} onSource={onTifaSource} fallback={failed} />
 
-      {active && failed && <section key={selected} className="detail-panel absolute z-10 flex flex-col border-zinc-300 bg-[#f6f6f6]" aria-labelledby="detail-title">
+      {active && failed && !writingOpen && <section key={selected} className="detail-panel absolute z-10 flex flex-col border-zinc-300 bg-[#f6f6f6]" aria-labelledby="detail-title">
         <div className="sticky top-0 flex shrink-0 items-center justify-between border-b border-zinc-300 bg-[#f6f6f6] px-6 py-3 md:px-9 md:py-4"><button onClick={() => navigate(null)} className="flex min-h-11 items-center gap-2 font-mono text-[11px]"><ArrowLeft size={16} />back to desk</button><span className="hidden font-mono text-[10px] text-zinc-400 sm:inline">ESC</span><button aria-label="Close section" onClick={() => navigate(null)} className="flex size-11 items-center justify-center hover:bg-zinc-200/60"><X /></button></div>
         <div className="panel-scroll overflow-y-auto overscroll-contain px-6 pb-10 pt-7 md:px-9 md:pt-9">
           <p className="eyebrow">object {active.number} / {active.object}</p>
@@ -211,7 +219,7 @@ export default function DeskExperience() {
         <DeskNavigation selected={selected} disabled={opening} onSelect={onDockSelect} />
         <div className="mt-3 flex items-center justify-between font-mono text-[9px] uppercase tracking-[.11em] text-zinc-500"><span className="whitespace-nowrap">© {new Date().getFullYear()} Dierta Pasific<span className="hidden sm:inline"> / Jakarta, Indonesia</span></span><span className="hidden md:inline">a desk, a few stories, an open invitation.</span><span>{chatOpen?'Tifa / conversation':selected ? `${active?.number} / exploring` : '00 / desk overview'}</span></div>
       </footer>
-      <div className="sr-only" aria-live="polite">{opening ? 'Opening Dipa’s desk. Controls will be ready in a moment.' : chatOpen?'Chat with Tifa opened. Escape returns to the desk.': selected ? `${active?.label} opened. Escape returns to the desk.` : 'Desk overview. Choose an object or use the navigation below.'}</div>
+      <div className="sr-only" aria-live="polite">{writingOpen && failed ? 'The 3D desk is paused. Your article is still available.' : opening ? 'Opening Dipa’s desk. Controls will be ready in a moment.' : chatOpen?'Chat with Tifa opened. Escape returns to the desk.': selected ? `${active?.label} opened. Escape returns to the desk.` : 'Desk overview. Choose an object or use the navigation below.'}</div>
     </main>
   </IconContext.Provider>
 }
