@@ -17,6 +17,7 @@ export function TifaLabel({enabled,mobile,onAsk}:{enabled:boolean;mobile:boolean
   const {camera,size}=useThree(),anchor=useRef<Group>(null),root=useRef<HTMLDivElement>(null)
   const button=useRef<HTMLButtonElement|null>(null),path=useRef<SVGPathElement>(null),dot=useRef<SVGCircleElement>(null)
   const observer=useRef<ResizeObserver|null>(null),dimensions=useRef({width:170,height:44})
+  const drawn=useRef('')
   const point=useMemo(()=>new Vector3(),[])
   const attach=useCallback((node:HTMLButtonElement|null)=>{
     observer.current?.disconnect();button.current=node
@@ -25,12 +26,16 @@ export function TifaLabel({enabled,mobile,onAsk}:{enabled:boolean;mobile:boolean
   useEffect(()=>()=>observer.current?.disconnect(),[])
   useFrame(()=>{
     if(!root.current||!button.current||!anchor.current)return
-    root.current.style.visibility=enabled?'visible':'hidden'
+    const visibility=enabled?'visible':'hidden'
+    if(root.current.style.visibility!==visibility)root.current.style.visibility=visibility
     if(!enabled)return
     anchor.current.updateWorldMatrix(true,false);camera.updateMatrixWorld()
     anchor.current.getWorldPosition(point);point.project(camera)
     const projected={x:(point.x+1)*size.width/2,y:(1-point.y)*size.height/2}
     const {width,height}=dimensions.current,position=placeTifaLabel(projected,width,height,size,mobile)
+    const signature=`${position.x},${position.y},${projected.x},${projected.y}`
+    if(drawn.current===signature)return
+    drawn.current=signature
     button.current.style.transform=`translate3d(${position.x}px,${position.y}px,0)`
     const x=Math.max(position.x,Math.min(position.x+width,projected.x)),y=Math.max(position.y,Math.min(position.y+height,projected.y))
     path.current?.setAttribute('d',`M${x},${y}L${projected.x},${projected.y}`)

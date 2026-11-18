@@ -7,6 +7,8 @@ import Content from './Content'
 import { destinations, readLocation } from './model'
 import type { Destination, AboutSection } from './model'
 import './desk.css'
+import { useBrowserVisible } from './browserVisibility'
+import { followSystemTheme, systemThemeQuery } from './systemTheme'
 import { initialOpeningMode, openingSessionKey } from './opening'
 import type { OpeningMode } from './opening'
 import { useTifaChat } from './useTifaChat'
@@ -37,6 +39,7 @@ export default function DeskExperience() {
   const [route, setRoute] = useState(readLocation)
   const chat = useTifaChat()
   const nativeWriting = useNativePaper()
+  const browserVisible = useBrowserVisible()
   // Explicit, opt-in comparison for device-specific Safari paint failures.
   // Normal visits always retain the 3D desk and its original rendering quality.
   const [paperCheck] = useState(() => import.meta.env.DEV && new URLSearchParams(window.location.search).get('paper-check') === 'html')
@@ -58,10 +61,8 @@ export default function DeskExperience() {
   const [reset, setReset] = useState(0)
   const [zoomStep, setZoomStep] = useState(0)
   const standing = true, reducedMotion = false
-  const [dark, setDark] = useState(() => {
-    try { const saved = localStorage.getItem('dipa-desk-theme'); if (saved) return saved === 'dark' } catch { /* Storage can be disabled. */ }
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-  })
+  const [dark, setDark] = useState(() => window.matchMedia(systemThemeQuery).matches)
+  useEffect(() => followSystemTheme(window.matchMedia(systemThemeQuery), setDark), [])
   const sceneSurface = useRef<HTMLDivElement>(null)
   const [sceneKey, setSceneKey] = useState(0)
   const heading = useRef<HTMLHeadingElement>(null)
@@ -148,7 +149,6 @@ export default function DeskExperience() {
     return () => { document.documentElement.classList.remove('desk-page'); window.removeEventListener('popstate', change); window.removeEventListener('hashchange', change) }
   }, [])
   useEffect(() => {
-    try { localStorage.setItem('dipa-desk-theme', dark ? 'dark' : 'light') } catch { /* The toggle still works without persistence. */ }
     const previous = document.documentElement.style.backgroundColor
     document.documentElement.style.backgroundColor = dark ? '#191b1e' : '#f6f6f6'
     return () => { document.documentElement.style.backgroundColor = previous }
@@ -187,10 +187,10 @@ export default function DeskExperience() {
     return () => window.removeEventListener('keydown', key)
   }, [navigate, selected, opening,chatOpen])
   useEffect(() => {
-    if (ready || failed || scenePaused) return
+    if (ready || failed || scenePaused || !browserVisible) return
     const timer = window.setTimeout(() => onFailure('load-timeout'), 20000)
     return () => window.clearTimeout(timer)
-  }, [ready, failed, scenePaused, onFailure, sceneKey])
+  }, [ready, failed, scenePaused, onFailure, sceneKey, browserVisible])
 
   return <IconContext.Provider value={{ weight: 'light', size: 18 }}>
     {import.meta.env.DEV && new URLSearchParams(window.location.search).has('scene-checks') && <SceneDevTools />}
@@ -213,7 +213,7 @@ export default function DeskExperience() {
       </div>}
 
       <div ref={sceneSurface} data-reading-strategy={keepRenderer ? 'parked' : parkRequested ? 'fresh-fallback' : 'fresh'} data-reading-capture-ms={import.meta.env.DEV ? readingFrame?.captureMs.toFixed(1) : undefined} data-reading-scene={scenePaused ? 'paused' : readingFrame ? 'resuming' : 'live'} onClick={event => { if ((failed || scenePaused) && focused && event.target === event.currentTarget) onDismiss() }} className="scene-layer absolute inset-0" aria-label="Interactive 3D desk. Drag to look around or choose an object from the navigation.">
-        {!failed && !isolatedWriting && (!scenePaused || keepRenderer) && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene keepRenderer={keepRenderer} readingPaused={scenePaused} onParkedLoss={onParkedLoss} readingFrame={readingFrame} onReadingFrame={onReadingFrame} nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={readingFrame && !keepRenderer ? false : chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={readingFrame && !keepRenderer ? 'writing' : selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
+        {!failed && !isolatedWriting && (!scenePaused || keepRenderer) && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene browserVisible={browserVisible} keepRenderer={keepRenderer} readingPaused={scenePaused} onParkedLoss={onParkedLoss} readingFrame={readingFrame} onReadingFrame={onReadingFrame} nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={readingFrame && !keepRenderer ? false : chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={readingFrame && !keepRenderer ? 'writing' : selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
         {!ready && !failed && !scenePaused && !readingFrame && <SceneSkeleton />}
         {readingFrame && <NativeReadingBackdrop frame={readingFrame} surface={sceneSurface} />}
         {failed && !chatOpen && !writingOpen && <div className="absolute inset-x-6 top-[45%] mx-auto max-w-sm border-y border-zinc-300 py-7 text-center"><p className="text-lg">The desk couldn't be drawn.</p><p className="mt-3 text-sm leading-relaxed text-zinc-500">You can still explore every section using the navigation below.</p><button onClick={() => { setFailure(null); setReady(false); setSceneKey(v => v + 1) }} className="mt-4 min-h-11 font-mono text-xs underline underline-offset-4">try loading again</button></div>}

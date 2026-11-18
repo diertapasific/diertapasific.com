@@ -1,7 +1,7 @@
 html.desk-page, html.desk-page body { width: 100%; height: 100%; overflow: hidden; }
 /* Only the object readers scroll; focus changes must never pan the desk document. */
 html.desk-page { overflow: clip; }
-html.desk-page body { position: fixed; inset: 0; }
+html.desk-page body { position: fixed; inset: 0; overflow: clip; }
 .desk-app { height: 100dvh; font-family: 'Outfit', sans-serif; }
 /* Native filters include WebGL and transformed HTML in Safari's composite.
    The same charcoal-paper / pale-ink transfer covers live and folded pages. */

@@ -1,12 +1,11 @@
 'use client'
 
-import { memo, useEffect, useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { Edges, Line } from '@react-three/drei'
 import * as THREE from 'three'
 import type { Point } from './model'
 import { getReadingBook } from './books'
 import type { ReadingBookId } from './books'
-import { keyboardPosition } from './motion'
 import { drawReadingArtwork } from './ReadingArtwork'
 
 export const PAPER = '#f6f6f6'
@@ -99,30 +98,3 @@ export function Face({ kind, position, size, rotation = [0, 0, 0], book = 'atomi
   useEffect(() => () => texture.dispose(), [texture])
   return <mesh position={position} rotation={rotation}><planeGeometry args={size} /><meshBasicMaterial map={texture} /></mesh>
 }
-
-export const Keyboard = memo(function Keyboard() {
-  // MX Keys Mini: low wedge, compact staggered keys, inset circular dishes and split arrows.
-  const rows = [
-    [.9, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.5],
-    [1.35, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.15],
-    [1.6, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1.9],
-    [2, 1, 1, 1, 1, 1, 1, 1, 1, 2.5],
-    [1, 1, 1.1, 1.2, 4.3, 1.1, 1, 1, 1, 1],
-  ]
-  return <group position={keyboardPosition} rotation={[-.055, 0, 0]}>
-    <Plate size={[2.19, .96, .055]} radius={.065} rotation={[-Math.PI / 2, 0, 0]} color="#e9e9e9" ink="#606060" />
-    <Block size={[1.98, .075, .11]} position={[0, -.005, -.39]} ink="#969696" />
-    {rows.map((row, r) => {
-      const total = row.reduce((sum, w) => sum + w, 0); let start = -.99
-      return row.map((units, i) => {
-        const width = units / total * 1.98 - .025, x = start + width / 2; start += width + .025
-        return <group key={`${r}-${i}`} position={[x, .039, -.365 + r * .143]} rotation={[-Math.PI / 2, 0, 0]}>
-          <Plate size={[width, r === 0 ? .09 : .118, .012]} radius={.024} ink="#888888" color="#f8f8f8" />
-          {r > 0 && units < 1.2 && <mesh position={[0, 0, .007]}><ringGeometry args={[.029, .031, 18]} /><meshBasicMaterial color="#d1d1d1" /></mesh>}
-          {r === 5 && i >= 8 && <Stroke points={[[-width / 2 + .012, 0, .008], [width / 2 - .012, 0, .008]]} color="#aaa" />}
-        </group>
-      })
-    })}
-  </group>
-})

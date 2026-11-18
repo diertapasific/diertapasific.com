@@ -20,7 +20,7 @@ async function load(file) {
   }
   const url=dataUrl(code);modules.set(file.href,url);return url
 }
-const {nativePaperLayout,writingReaderAvailable}=await import(await load(new URL('../src/desk/nativePaperLayout.ts',import.meta.url)))
+const {nativePaperLayout,writingReaderAvailable,nativeWritingRequested}=await import(await load(new URL('../src/desk/nativePaperLayout.ts',import.meta.url)))
 const {nativeReadingImageLayout}=await import(await load(new URL('../src/desk/nativeReadingScene.ts',import.meta.url)))
 const {landReadingCamera,readingReturnDelta}=await import(await load(new URL('../src/desk/readingCamera.ts',import.meta.url)))
 const {focusView}=await import(await load(new URL('../src/desk/model.ts',import.meta.url)))
@@ -113,4 +113,10 @@ test('a delayed fresh-renderer frame cannot skip the return camera movement',asy
     assert.ok(fraction>0&&fraction<.25,'the first resumed frame moves gradually after a shader stall')
     assert.equal(readingReturnDelta(delay,false),delay,'ordinary navigation keeps elapsed-time behavior')
   }
+})
+
+
+test('Writing uses the live paper by default and retains explicit native recovery links',()=>{
+  for(const search of ['', '?camera=fresh', '?paper=immersive-v2', '?paper=ink-recovery']) assert.equal(nativeWritingRequested(search),false)
+  for(const search of ['?paper=native', '?camera=parked', '?paper=native&camera=fresh']) assert.equal(nativeWritingRequested(search),true)
 })
