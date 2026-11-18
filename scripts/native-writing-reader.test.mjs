@@ -20,7 +20,7 @@ async function load(file) {
   }
   const url=dataUrl(code);modules.set(file.href,url);return url
 }
-const {nativePaperLayout}=await import(await load(new URL('../src/desk/nativePaperLayout.ts',import.meta.url)))
+const {nativePaperLayout,writingReaderAvailable}=await import(await load(new URL('../src/desk/nativePaperLayout.ts',import.meta.url)))
 const {focusView}=await import(await load(new URL('../src/desk/model.ts',import.meta.url)))
 const {ArticlePage}=await import(await load(new URL('../src/desk/ArticlePage.tsx',import.meta.url)))
 const {POSTS}=await import(await load(new URL('../src/data/posts.ts',import.meta.url)))
@@ -56,5 +56,34 @@ test('all six shared paper pages contain the full edition with the same article 
     assert.match(html,endings[index]);assert.ok(html.includes(post.href))
     assert.match(html,/Choose an article sheet/);assert.equal((html.match(/aria-pressed="true"/g)||[]).length,1)
     assert.doesNotMatch(html,/<iframe|loading article|hasn’t been added/)
+  }
+})
+
+
+test('graphics failure keeps Writing available across native and projected reader modes',()=>{
+  for(const native of [true,false]){
+    assert.equal(writingReaderAvailable('writing',native,true),true)
+    assert.equal(writingReaderAvailable(null,native,true),false)
+    assert.equal(writingReaderAvailable('about',native,true),false)
+  }
+  assert.equal(writingReaderAvailable('writing',true,false),true)
+  assert.equal(writingReaderAvailable('writing',false,false),false)
+})
+
+test('both paper palettes keep body and heading ink readable against their background',async()=>{
+  const css=await readFile(new URL('../src/desk/desk.css',import.meta.url),'utf8')
+  const light=css.match(/\.writing-sheet \{([^}]+)\}/)[1]
+  const dark=css.match(/\.writing-sheet\[data-theme="dark"\] \{([^}]+)\}/)[1]
+  const luminance=hex=>{
+    const values=hex.match(/\w\w/g).map(value=>parseInt(value,16)/255).map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4)
+    return values[0]*.2126+values[1]*.7152+values[2]*.0722
+  }
+  for(const palette of [light,dark]){
+    const color=name=>palette.match(new RegExp(`--sheet-${name}: #([a-f0-9]{6})`))[1]
+    const paper=luminance(color('paper'))
+    for(const name of ['body','ink']){
+      const ink=luminance(color(name)),ratio=(Math.max(paper,ink)+.05)/(Math.min(paper,ink)+.05)
+      assert.ok(ratio>=4.5,`${name} contrast is readable`)
+    }
   }
 })

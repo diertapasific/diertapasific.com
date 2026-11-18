@@ -15,3 +15,9 @@ export function nativePaperLayout(width: number, height: number) {
 }
 
 export const nativePaperQuery = '(max-width: 767px), (hover: none) and (pointer: coarse)'
+
+// The paper must outlive the scene, including on devices normally using the
+// projected desktop reader. Graphics recovery cannot remove article content.
+export function writingReaderAvailable(section: string | null, native: boolean, failed: boolean) {
+  return section === 'writing' && (native || failed)
+}

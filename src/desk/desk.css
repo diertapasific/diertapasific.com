@@ -262,3 +262,17 @@ html.desk-page body { position: fixed; inset: 0; }
 /* Touch readers keep the same paper geometry without a transformed, filtered,
    frame-driven HTML root. Safari can tile the full article as it scrolls. */
 .native-writing-reader { z-index: 8; transform: none; filter: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+.native-writing-reader[data-scene-failed="true"] { outline: 1px solid #a5a5a5; }
+
+/* WebKit text fill is inherited separately from color. Give every paper text
+   node its own theme-bound paint value, including content first seen on scroll. */
+.writing-sheet, .writing-sheet * { -webkit-text-fill-color: currentColor; }
+.writing-sheet { color-scheme: light; }
+.writing-sheet .monitor-document { --article-paint: var(--sheet-body); }
+.writing-sheet .monitor-document, .writing-sheet .monitor-document * { -webkit-text-fill-color: var(--article-paint); }
+.writing-sheet .monitor-document :is(h1, h2, h3, h4, h5, h6, a) { --article-paint: var(--sheet-ink); }
+.writing-sheet .monitor-document blockquote { --article-paint: var(--sheet-muted); }
+.writing-sheet ::selection { color: #2a2a2a; -webkit-text-fill-color: #2a2a2a; background: #d4d4d4; }
+.native-writing-reader { isolation: isolate; color-scheme: light; }
+.native-writing-reader[data-theme="dark"] { color-scheme: dark; }
