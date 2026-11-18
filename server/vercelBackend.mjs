@@ -4,13 +4,14 @@ import { createSpotifyService } from './spotifyCore.mjs'
 import { handleTifa } from './tifa.mjs'
 
 const json = (data, status = 200, headers = {}) => Response.json(data, { status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...headers } })
+const budget = (value, fallback) => /^[1-9]\d{0,5}$/.test(value || '') ? Number(value) : fallback
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms))
 
 export function createTifaHandler(env, notes, articles, { fetcher = fetch, store = createCloudStore(env, fetcher) } = {}) {
   return async request => {
     const origin = new URL(request.url).origin
     const runtime = { GROQ_API_KEY: env.GROQ_API_KEY, GROQ_MODEL: env.GROQ_MODEL, GROQ_FALLBACK_MODEL: env.GROQ_FALLBACK_MODEL, ALLOWED_ORIGIN: origin }
-    if (request.method !== 'POST' || request.headers.get('Origin') && request.headers.get('Origin') !== origin || !request.headers.get('Content-Type')?.includes('application/json') || !env.GROQ_API_KEY) {
+    if (request.method !== 'POST' || request.headers.get('Sec-Fetch-Site') === 'cross-site' || request.headers.get('Origin') && request.headers.get('Origin') !== origin || request.headers.get('Content-Type')?.split(';', 1)[0].trim().toLowerCase() !== 'application/json' || !env.GROQ_API_KEY) {
       return handleTifa(request, runtime, notes, fetcher, articles)
     }
     if (!store.configured) return json({ error: 'setup_required' }, 503)
@@ -20,7 +21,11 @@ export function createTifaHandler(env, notes, articles, { fetcher = fetch, store
       const visitor = createHash('sha256').update(address.split(',')[0].trim()).digest('hex').slice(0, 32)
       const allowance = await store.quota(`tifa:quota:${visitor}`, 8, 60)
       if (!allowance.allowed) return json({ error: 'rate_limited', retryAfter: allowance.retryAfter }, 429, { 'Retry-After': String(allowance.retryAfter) })
-      return handleTifa(request, runtime, notes, fetcher, articles)
+      return await handleTifa(request, runtime, notes, fetcher, articles, () => store.quotaAll([
+        { name: `tifa:daily:${visitor}`, limit: budget(env.TIFA_DAILY_VISITOR_LIMIT, 40), seconds: 86400 },
+        { name: 'tifa:provider:minute', limit: budget(env.TIFA_GLOBAL_MINUTE_LIMIT, 20), seconds: 60 },
+        { name: 'tifa:provider:day', limit: budget(env.TIFA_GLOBAL_DAILY_LIMIT, 500), seconds: 86400 },
+      ]))
     } catch { return json({ error: 'provider_unavailable' }, 503) }
   }
 }

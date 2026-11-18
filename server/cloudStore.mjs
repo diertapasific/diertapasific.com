@@ -2,6 +2,21 @@ import { randomUUID } from 'node:crypto'
 
 const RELEASE = "if redis.call('GET',KEYS[1])==ARGV[1] then return redis.call('DEL',KEYS[1]) else return 0 end"
 const QUOTA = "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]) end; return {n,redis.call('TTL',KEYS[1])}"
+// Check all windows before charging any of them. One Redis script prevents
+// cold functions from racing past a shared budget or charging denied calls.
+const QUOTAS = `local retry=0
+for i,key in ipairs(KEYS) do
+  local count=tonumber(redis.call('GET',key) or '0')
+  if count>=tonumber(ARGV[i*2-1]) then
+    retry=math.max(retry,math.max(1,redis.call('TTL',key)))
+  end
+end
+if retry>0 then return {0,retry} end
+for i,key in ipairs(KEYS) do
+  local count=redis.call('INCR',key)
+  if count==1 then redis.call('EXPIRE',key,ARGV[i*2]) end
+end
+return {1,0}`
 const OBSERVE = "local old=redis.call('GET',KEYS[1]); if not old or cjson.decode(old).observedAt<=tonumber(ARGV[2]) then redis.call('SET',KEYS[1],ARGV[1]); return 1 end; return 0"
 
 export function createCloudStore(env, fetcher = fetch) {
@@ -31,6 +46,10 @@ export function createCloudStore(env, fetcher = fetch) {
     async quota(name, limit, seconds = 60) {
       const [count, ttl] = await command(['EVAL', QUOTA, 1, key(name), seconds])
       return { allowed: Number(count) <= limit, retryAfter: Math.max(1, Number(ttl) || seconds) }
+    },
+    async quotaAll(windows) {
+      const [allowed, retryAfter] = await command(['EVAL', QUOTAS, windows.length, ...windows.map(window => key(window.name)), ...windows.flatMap(window => [window.limit, window.seconds])])
+      return { allowed: Number(allowed) === 1, retryAfter: Math.max(1, Number(retryAfter) || 1) }
     },
     async observe(value) { return command(['EVAL', OBSERVE, 1, key('spotify:observed'), JSON.stringify(value), value.observedAt]) },
   }
