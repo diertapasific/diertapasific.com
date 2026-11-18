@@ -2,7 +2,7 @@
 
 import { Component, Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowLeft, ArrowsOutCardinal, X, ArrowCounterClockwise, IconContext, Moon, Sun, ChatCircle } from '@phosphor-icons/react'
+import { ArrowLeft, ArrowsOutCardinal, X, ArrowCounterClockwise, IconContext, Moon, Sun, ChatCircle, MagnifyingGlassPlus, MagnifyingGlassMinus } from '@phosphor-icons/react'
 import Content from './Content'
 import { destinations, readLocation } from './model'
 import type { Destination, AboutSection } from './model'
@@ -12,6 +12,7 @@ import type { OpeningMode } from './opening'
 import { useTifaChat } from './useTifaChat'
 import { TifaConversation } from './TifaConversation'
 import { DeskNavigation } from './DeskNavigation'
+import { DeskSound } from './DeskSound'
 import type { TifaSource } from './tifaAnswers'
 
 const DeskScene = lazy(() => import('./DeskScene'))
@@ -40,6 +41,7 @@ export default function DeskExperience() {
   const [ready, setReady] = useState(false)
   const [failed, setFailed] = useState(false)
   const [reset, setReset] = useState(0)
+  const [zoomStep, setZoomStep] = useState(0)
   const standing = true, reducedMotion = false
   const [dark, setDark] = useState(() => {
     try { const saved = localStorage.getItem('dipa-desk-theme'); if (saved) return saved === 'dark' } catch { /* Storage can be disabled. */ }
@@ -162,6 +164,7 @@ export default function DeskExperience() {
         <div className="flex items-center gap-3 md:gap-7">
           <span className="hidden font-mono text-[10px] uppercase tracking-[.15em] text-zinc-500 sm:block">a personal space</span>
           <button type="button" disabled={opening} onClick={onAsk} aria-label="Ask Tifa about Dipa" className="flex min-h-11 items-center gap-2 font-mono text-[10px] text-zinc-500 active:scale-[.98]"><ChatCircle size={16} /><span>ask Tifa</span></button>
+          <DeskSound disabled={opening} />
           <button disabled={opening} onClick={() => setDark(v => !v)} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} title={`${dark ? 'Light' : 'Dark'} mode`} className="flex size-11 shrink-0 items-center justify-center active:scale-[.98]">{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
         </div>
       </header>
@@ -173,19 +176,19 @@ export default function DeskExperience() {
       </div>}
 
       <div ref={sceneSurface} onClick={event => { if (failed && focused && event.target === event.currentTarget) onDismiss() }} className="scene-layer absolute inset-0" aria-label="Interactive 3D desk. Drag to look around or choose an object from the navigation.">
-        {!failed && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene onDismiss={onDismiss} chatOpen={chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
+        {!failed && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene onDismiss={onDismiss} chatOpen={chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
         {!ready && !failed && <SceneSkeleton />}
         {failed && !chatOpen && <div className="absolute inset-x-6 top-[45%] mx-auto max-w-sm border-y border-zinc-300 py-7 text-center"><p className="text-lg">The desk couldn't be drawn.</p><p className="mt-3 text-sm leading-relaxed text-zinc-500">You can still explore every section using the navigation below.</p><button onClick={() => { setFailed(false); setReady(false); setSceneKey(v => v + 1) }} className="mt-4 min-h-11 font-mono text-xs underline underline-offset-4">try loading again</button></div>}
       </div>
 
-      {!focused && <div className="desk-instructions pointer-events-none absolute bottom-[143px] left-5 z-[4] md:bottom-[129px] md:left-10"><div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[.1em] text-zinc-500"><ArrowsOutCardinal size={16} /><span className="hidden sm:inline">drag to look around</span><span className="sm:hidden">drag to look / tap to explore</span></div><p className="mt-2 hidden font-mono text-[10px] text-zinc-400 sm:block">click an object to get closer</p></div>}
+      {!focused && <div className="desk-instructions pointer-events-none absolute bottom-[143px] left-5 z-[4] md:bottom-[129px] md:left-10"><div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[.1em] text-zinc-500"><ArrowsOutCardinal size={16} className="hidden sm:block" /><span className="hidden sm:inline">drag to look / scroll to zoom</span><span className="text-[9px] sm:hidden">drag / pinch to zoom</span></div><p className="mt-2 hidden font-mono text-[10px] text-zinc-400 sm:block">click an object to get closer</p></div>}
 
       {focused && (!failed||chatOpen) && <div className="focus-toolbar pointer-events-none absolute inset-x-5 top-[82px] z-10 flex items-center justify-between md:inset-x-10 md:top-[94px]">
         <button onClick={() => navigate(null)} className="pointer-events-auto flex min-h-11 shrink-0 items-center gap-2 whitespace-nowrap bg-[#f6f6f6]/90 px-2 font-mono text-[11px] active:scale-[.98]"><ArrowLeft size={16} />back to desk<span className="ml-3 hidden text-[9px] text-zinc-400 md:inline">ESC</span></button>
         <span className="font-mono text-[10px] text-zinc-500">{chatOpen?'Tifa / desk companion':`${active?.number} / ${active?.object}`}</span>
       </div>}
 
-      {!focused && <button disabled={opening} aria-label="Reset view" className="reset-view absolute bottom-[141px] right-5 z-[4] flex min-h-11 items-center gap-2 font-mono text-[10px] uppercase tracking-[.08em] text-zinc-500 md:bottom-[129px] md:right-10" onClick={() => setReset(v => v + 1)}><ArrowCounterClockwise size={16} /><span className="hidden sm:inline">reset view</span></button>}
+      {!focused && <div role="group" aria-label="Desk view controls" className="reset-view absolute bottom-[141px] right-5 z-[4] flex items-center md:bottom-[129px] md:right-10"><button disabled={opening || failed} aria-label="Zoom out on desk" title="Zoom out (−)" onClick={() => setZoomStep(v => v - 1)} className="flex size-11 items-center justify-center text-zinc-500 active:scale-[.98]"><MagnifyingGlassMinus size={16} /></button><button disabled={opening || failed} aria-label="Zoom in on desk" title="Zoom in (+)" onClick={() => setZoomStep(v => v + 1)} className="flex size-11 items-center justify-center text-zinc-500 active:scale-[.98]"><MagnifyingGlassPlus size={16} /></button><button disabled={opening} aria-label="Reset view" className="flex min-h-11 min-w-11 items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[.08em] text-zinc-500 active:scale-[.98]" onClick={() => setReset(v => v + 1)}><ArrowCounterClockwise size={16} /><span className="hidden sm:inline">reset view</span></button></div>}
 
       <TifaConversation open={chatOpen} chat={chat} surface={sceneSurface} onSource={onTifaSource} fallback={failed} />
 

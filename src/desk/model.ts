@@ -56,8 +56,8 @@ export function overviewView(width: number, height: number) {
   }
 }
 
-export function overviewPose(width: number, height: number, orbit: { x: number; y: number }, standing: boolean, fittedZoom?: number) {
-  const view = overviewView(width, height), zoom = fittedZoom ?? view.zoom
+export function overviewPose(width: number, height: number, orbit: { x: number; y: number; zoom?: number }, standing: boolean, fittedZoom?: number) {
+  const view = overviewView(width, height), zoom = (fittedZoom ?? view.zoom) * (orbit.zoom ?? 1)
   const angle = .43 + orbit.x, elevation = Math.sin(.53 + orbit.y)
   const vertical = elevation / Math.hypot(1, elevation), up = 1 / Math.hypot(1, elevation)
   const shift = view.shift / zoom

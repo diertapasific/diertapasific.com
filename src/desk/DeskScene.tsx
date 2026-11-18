@@ -32,7 +32,7 @@ import { advanceCameraMotion, createCameraMotion } from './cameraMotion'
 
 type SceneProps = {
   dark: boolean; selected: Destination | null; onSelect: (id: Destination) => void; aboutSection: AboutSection; onAboutSection: (section: AboutSection) => void;
-  reducedMotion: boolean; reset: number; standing: boolean; surface: RefObject<HTMLDivElement>; onReady: () => void; onFailure: () => void;
+  reducedMotion: boolean; reset: number; zoomStep: number; standing: boolean; surface: RefObject<HTMLDivElement>; onReady: () => void; onFailure: () => void;
   openingMode: OpeningMode; onOpeningComplete: () => void; onDismiss: () => void;
   chatOpen?: boolean; onAsk?: () => void; replyPulse?: number; projectRequest?: {id:string;revision:number;article?:boolean}|null;
 }
@@ -171,7 +171,7 @@ const Ground = memo(function Ground() {
   return <lineSegments><bufferGeometry><bufferAttribute attach="attributes-position" args={[points, 3]} /></bufferGeometry><lineBasicMaterial color="#d4d4d4" transparent opacity={.28} /></lineSegments>
 })
 
-function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, openingMode, opening, chatOpen }: Pick<SceneProps, 'selected' | 'reducedMotion' | 'standing' | 'openingMode' | 'chatOpen'> & { orbit: MutableRefObject<{ x: number; y: number }>; annotationPlan: MutableRefObject<AnnotationPlan | null>; opening: MutableRefObject<OpeningTimeline> }) {
+function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, openingMode, opening, chatOpen }: Pick<SceneProps, 'selected' | 'reducedMotion' | 'standing' | 'openingMode' | 'chatOpen'> & { orbit: MutableRefObject<{ x: number; y: number; zoom: number }>; annotationPlan: MutableRefObject<AnnotationPlan | null>; opening: MutableRefObject<OpeningTimeline> }) {
   const { camera, size } = useThree()
   const start = useRef(true), travel = useMemo(createCameraMotion, [])
   const target = useMemo(() => new THREE.Vector3(), []), position = useMemo(() => new THREE.Vector3(), [])
@@ -226,7 +226,7 @@ function Ready({ onReady, onFailure }: Pick<SceneProps, 'onReady' | 'onFailure'>
   return null
 }
 
-function AnimatedDesk(props: SceneProps & { annotationPlan: MutableRefObject<AnnotationPlan | null>; motion: MutableRefObject<DeskMotion>; orbit: MutableRefObject<{ x: number; y: number }>; suppressClickUntil: MutableRefObject<number>; opening: MutableRefObject<OpeningTimeline> }) {
+function AnimatedDesk(props: SceneProps & { annotationPlan: MutableRefObject<AnnotationPlan | null>; motion: MutableRefObject<DeskMotion>; orbit: MutableRefObject<{ x: number; y: number; zoom: number }>; suppressClickUntil: MutableRefObject<number>; opening: MutableRefObject<OpeningTimeline> }) {
   const [presentation, setPresentation] = useState<{ id: Destination | null; ready: boolean }>({ id: null, ready: false })
   const previous = useRef(presentation)
   useFrame((_, delta) => {
@@ -241,7 +241,7 @@ function AnimatedDesk(props: SceneProps & { annotationPlan: MutableRefObject<Ann
 }
 
 export default function DeskScene(props: SceneProps) {
-  const { orbit, suppressClickUntil } = useDeskDrag(props.surface, !props.selected && !props.chatOpen && props.openingMode === 'none', props.reset)
+  const { orbit, suppressClickUntil } = useDeskDrag(props.surface, !props.selected && !props.chatOpen && props.openingMode === 'none', props.reset, props.zoomStep)
   const motion = useRef(createDeskMotion())
   const opening = useRef(createOpeningTimeline(props.openingMode))
   const annotationPlan = useRef<AnnotationPlan | null>(null)
