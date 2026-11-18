@@ -33,9 +33,9 @@ export function InteractiveMiniature({ enabled, suppressClickUntil }: { enabled:
   return <group ref={rig} onPointerOver={event => { event.stopPropagation(); if (enabled && !mobile && event.pointerType === 'mouse') setHovered(true) }} onPointerOut={() => setHovered(false)} onClick={event => { event.stopPropagation(); if (event.delta < 6) roll() }}>
     <FormulaCar wheelTravel={distance} />
     {enabled && <Html position={[miniatureHome[0], miniatureHome[1] + .12, miniatureHome[2]]} center zIndexRange={[4, 3]}>
-      <button data-desk-control="miniature" aria-label="Roll the F1 miniature" aria-disabled={running} className={`miniature-trigger relative block h-11 ${mobile ? 'is-mobile w-14' : 'w-[88px]'} bg-transparent ${hovered ? 'is-hovered' : ''}`}
+      <button data-desk-control="miniature" aria-label="Roll the F1 miniature" disabled={running} className={`miniature-trigger relative block h-11 ${mobile ? 'is-mobile w-14' : 'w-[88px]'} bg-transparent ${hovered ? 'is-hovered' : ''}`}
         onPointerEnter={event => setHovered(!mobile && event.pointerType === 'mouse')} onPointerLeave={() => setHovered(false)} onPointerDown={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); roll() }}>
-        <span className="sr-only">Roll the F1 miniature</span><span aria-hidden="true" className={`miniature-cue pointer-events-none absolute left-1/2 top-full flex items-center gap-1 whitespace-nowrap font-mono text-[8px] text-zinc-500 ${!discovered || running ? 'is-visible' : ''}`}><ArrowBendUpLeft size={12} weight="light" />{running ? 'a quick lap.' : 'tap to roll'}</span>
+        <span className="sr-only">Roll the F1 miniature</span><span aria-hidden="true" className={`miniature-cue pointer-events-none absolute left-1/2 top-1/2 mt-2 flex items-center gap-1 whitespace-nowrap font-mono text-[8px] sm:mt-4 text-zinc-500 ${!discovered || running ? 'is-visible' : ''}`}><ArrowBendUpLeft size={12} weight="light" />{running ? 'a quick lap.' : 'tap to roll'}</span>
       </button><span className="sr-only" role="status">{running ? 'The F1 miniature is rolling and will park itself.' : ''}</span>
     </Html>}
   </group>
