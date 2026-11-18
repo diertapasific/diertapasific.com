@@ -59,7 +59,7 @@ test('suggestions are short visitor questions, grounded in the current article, 
   const suggestions=suggestQuestions(['article:03'],context.notes,multipart)
   assert.ok(!suggestions.includes('Why does Cardify use two prompts?'))
   assert.ok(!suggestions.includes('How are Cardify flashcards formatted?'))
-  const answer = publicAnswer({reply:'An article-backed answer.',sourceIds:['article:03'],followups:['Would you like help?', 'What is the weather?']},context.notes,messages)
+  const answer = publicAnswer({kind:'answer',reply:'An article-backed answer.',sourceIds:['article:03'],followups:['Would you like help?', 'What is the weather?']},context.notes,messages)
   assert.deepEqual(answer.answer.followups, questions)
   assert.equal(answer.answer.sources[0].articleId,'03')
   const detailed=[user('How did Rupcara handle non-banknote images, and what image size, epochs, optimizer and batch size did it use?')]
@@ -71,13 +71,13 @@ test('the actual provider prompt includes the full relevant article and consumes
   const messages = [user('What image size, epochs and batch size did Rupcara use?')]
   const response = await handleTifa(new Request('https://local/api/tifa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages,articles:[{markdown:'Untrusted browser source'}]})}),{GROQ_API_KEY:'test-only'},notes,async (url, init) => {
     payload=JSON.parse(init.body)
-    return Response.json({choices:[{message:{content:JSON.stringify({reply:'224×224 pixels, 20 epochs and a batch size of 32.',sourceIds:['article:04','unknown']})}}]})
+    return Response.json({choices:[{message:{content:JSON.stringify({kind:'answer',reply:'224×224 pixels, 20 epochs and a batch size of 32.',sourceIds:['article:04','unknown']})}}]})
   },tifaArticles)
   assert.equal(response.status,200)
   assert.match(payload.messages[0].content,/20 epochs/)
   assert.doesNotMatch(payload.messages[0].content,/Untrusted browser source/)
   assert.doesNotMatch(payload.messages[0].content,/facebook\/bart-large-cnn/)
-  assert.deepEqual(payload.response_format.json_schema.schema.required,['reply','sourceIds'])
+  assert.deepEqual(payload.response_format.json_schema.schema.required,['kind','reply','sourceIds'])
   const answer=await response.json()
   assert.equal(answer.answer.sources[0].articleId,'04')
   assert.match(systemPrompt([],[]),/historical biographical/)

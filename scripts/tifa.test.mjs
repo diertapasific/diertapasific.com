@@ -42,7 +42,7 @@ test('unknown and unpublished personal details are not invented',()=>{
     assert.equal(answer.topic,null);assert.match(answer.text,/don’t have/);assert.equal(answer.sources[0].destination,'contact')
   }
   assert.equal(answerTifa('Explain quantum entanglement',notes).topic,null)
-  assert.match(answerTifa('Explain quantum entanglement',notes).text,/isn’t covered/)
+  assert.match(answerTifa('Explain quantum entanglement',notes).text,/ask Dipa directly/); assert.equal(answerTifa('Explain quantum entanglement',notes).sources[0].destination,'contact')
 })
 test('question normalization handles punctuation and greetings',()=>{
   assert.equal(normalizeQuestion('  DIPA’S   education?! '),'dipas education')

@@ -64,7 +64,7 @@ test('missing storage and non-GET Spotify requests fail without reaching a provi
 })
 test('Tifa rejects foreign origins and shares a bounded quota across independent functions', async () => {
   const store = memoryStore(); let calls = 0
-  const fetcher = async () => { calls++; return json({ choices: [{ message: { content: JSON.stringify({ reply: 'Dipa builds software.', sourceIds: [] }) } }] }) }
+  const fetcher = async () => { calls++; return json({ choices: [{ message: { content: JSON.stringify({ kind: 'answer', reply: 'Dipa builds software.', sourceIds: [] }) } }] }) }
   const req = (origin = 'https://desk.example') => new Request('https://desk.example/api/tifa', { method: 'POST', headers: { Origin: origin, 'Content-Type': 'application/json', 'x-vercel-forwarded-for': '192.0.2.4' }, body: JSON.stringify({ messages: [{ role: 'user', content: 'Who is Dipa?' }] }) })
   assert.equal((await createTifaHandler(env, [], [], { store, fetcher })(req('https://foreign.example'))).status, 403)
   for (let n = 0; n < 8; n++) assert.equal((await createTifaHandler(env, [], [], { store, fetcher })(req())).status, 200)
