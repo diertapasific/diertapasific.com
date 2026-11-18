@@ -43,7 +43,7 @@ export function SceneDevTools() {
     return () => window.removeEventListener(sample, receive)
   }, [])
   const run = (action: string) => {
-    if (action === 'sample' && document.querySelector('.scene-layer[data-reading-scene="paused"]')) {
+    if (action === 'sample' && document.querySelector('.scene-layer[data-reading-scene="paused"]') && !document.querySelector('.desk-renderer')) {
       const surface = document.querySelector<HTMLElement>('.scene-layer')
       setReport(JSON.stringify({ loop: 'unmounted', backdrop: Boolean(surface?.querySelector('[data-reading-backdrop]')), captureMs: surface?.dataset.readingCaptureMs }))
       return

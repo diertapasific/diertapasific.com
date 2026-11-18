@@ -54,7 +54,7 @@ export function ProjectedSurface({ children, position, rotation, worldSize, pixe
   }, [project])
   useFrame(project)
   return <group ref={anchor} position={position} rotation={rotation}>
-    <Html wrapperClass={nativeLayout ? 'native-surface-portal' : undefined} portal={portal} ref={attach} calculatePosition={origin} style={{ ...surfaceStyle, pointerEvents: interactive ? 'auto' : 'none' }} zIndexRange={[layer, layer]}>
+    <Html wrapperClass={`scene-surface-portal${nativeLayout ? ' native-surface-portal' : ''}`} portal={portal} ref={attach} calculatePosition={origin} style={{ ...surfaceStyle, pointerEvents: interactive ? 'auto' : 'none' }} zIndexRange={[layer, layer]}>
       {children}
     </Html>
   </group>

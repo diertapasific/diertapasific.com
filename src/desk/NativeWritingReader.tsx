@@ -18,8 +18,8 @@ export function useNativePaper() {
   return native
 }
 
-export function NativeWritingReader({ index, onSelect, dark, surface, fallback = false, revealDelay = 650, closing = false }: {
-  index: number; onSelect: (index: number) => void; dark: boolean; surface: RefObject<HTMLDivElement>; fallback?: boolean; revealDelay?: number; closing?: boolean;
+export function NativeWritingReader({ index, onSelect, dark, surface, fallback = false, revealDelay = 650, closing = false, instantClose = false }: {
+  index: number; onSelect: (index: number) => void; dark: boolean; surface: RefObject<HTMLDivElement>; fallback?: boolean; revealDelay?: number; closing?: boolean; instantClose?: boolean;
 }) {
   const [size, setSize] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }))
   const [landed, setLanded] = useState(false)
@@ -42,7 +42,7 @@ export function NativeWritingReader({ index, onSelect, dark, surface, fallback =
     return () => window.clearTimeout(timer)
   }, [revealDelay])
   const layout = nativePaperLayout(size.width, size.height)
-  return createPortal(<div data-native-writing-reader data-theme={dark ? 'dark' : 'light'} data-scene-failed={fallback || undefined} className="native-writing-reader" hidden={!landed} style={{ ...layout, position: 'fixed', opacity: closing ? 0 : 1, pointerEvents: closing ? 'none' : undefined }}>
+  return createPortal(<div data-native-writing-reader data-theme={dark ? 'dark' : 'light'} data-scene-failed={fallback || undefined} className="native-writing-reader" hidden={!landed || (closing && instantClose)} style={{ ...layout, position: 'fixed', opacity: closing ? 0 : 1, pointerEvents: closing ? 'none' : undefined }}>
     <NativeArticleDeck index={index} onSelect={onSelect} dark={dark} interactive={landed && !closing} width={layout.width} height={layout.height} />
   </div>, document.body)
 }
