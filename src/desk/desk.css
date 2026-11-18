@@ -1,0 +1,217 @@
+html.desk-page, html.desk-page body { width: 100%; height: 100%; overflow: hidden; }
+.desk-app { height: 100dvh; font-family: 'Outfit', sans-serif; }
+/* Charcoal paper and pale ink share one transfer, including page turns. */
+.desk-app[data-theme="dark"] { filter: url(#blueprint-dark-theme); }
+.eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.7; letter-spacing: .1em; text-transform: uppercase; color: #777777; }
+.desk-app button, .desk-app a { -webkit-tap-highlight-color: transparent; }
+.desk-app button:focus-visible, .desk-app a:focus-visible { outline: 2px solid #454545; outline-offset: 5px; }
+.scene-layer canvas { touch-action: none; cursor: grab; }
+.scene-layer canvas:active { cursor: grabbing; }
+.scene-layer { touch-action: none; }
+.scene-layer[data-dragging="true"], .scene-layer[data-dragging="true"] * { cursor: grabbing !important; user-select: none; }
+.has-selection .scene-layer canvas { cursor: default; }
+.object-label { touch-action: none; }
+.object-surface { color: #2a2a2a; font-family: 'Outfit', sans-serif; overflow: hidden; touch-action: auto; user-select: text; animation: surface-arrive 1s cubic-bezier(.16,1,.3,1) both; }
+.object-surface button, .object-surface a { touch-action: manipulation; }
+/* Both device screens stay mounted throughout the camera move. */
+.surface-projects, .surface-music { animation: none; }
+.monitor-document { color: #5b5b5b; font-size: 14px; line-height: 1.85; overflow-wrap: anywhere; }
+.monitor-document > :first-child { margin-top: 0; }
+.monitor-document h1, .monitor-document h2, .monitor-document h3, .monitor-document h4 { color: #2a2a2a; line-height: 1.3; letter-spacing: -.025em; margin: 1.7em 0 .7em; font-weight: 500; }
+.monitor-document h1, .monitor-document h2 { font-size: 22px; }
+.monitor-document h3, .monitor-document h4 { font-size: 17px; }
+.monitor-document p, .monitor-document ul, .monitor-document ol, .monitor-document pre, .monitor-document blockquote { margin: 1em 0; }
+.monitor-document ul, .monitor-document ol { padding-left: 1.5em; }
+.monitor-document ul { list-style: disc; }
+.monitor-document ol { list-style: decimal; }
+.monitor-document li { margin: .35em 0; }
+.monitor-document a { color: #363636; text-decoration: underline; text-decoration-color: #aaa; text-underline-offset: 3px; }
+.monitor-document blockquote { border-left: 1px solid #aaa; padding-left: 1.2em; color: #777; }
+.monitor-document code { font-family: 'JetBrains Mono', monospace; font-size: .83em; background: #ececec; padding: .12em .3em; }
+.monitor-document pre { overflow-x: auto; border-block: 1px solid #ccc; background: #f0f0f0; padding: 16px; line-height: 1.7; }
+.monitor-document pre code { padding: 0; background: transparent; }
+.monitor-document table { border-collapse: collapse; min-width: 100%; font-size: 12px; }
+.monitor-document th, .monitor-document td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+.surface-scroll { scrollbar-width: thin; scrollbar-color: #c0c0c0 transparent; overscroll-behavior: contain; touch-action: pan-y; }
+.surface-scroll p, .surface-scroll h3 { overflow-wrap: anywhere; }
+.object-surface .eyebrow { font-size: 9px; letter-spacing: .06em; }
+.object-surface .record-drawing { width: 110px; height: 110px; }
+.object-surface .record-drawing i { inset: 20px; }
+.surface-music h3 { font-size: 21px; }
+.surface-contact p, .surface-contact a { font-size: 13px; }
+.surface-contact h2 { font-size: 29px; }
+.surface-contact .mt-8 { margin-top: 20px; }
+.surface-contact .py-6 { padding-top: 16px; padding-bottom: 16px; }
+.surface-about .text-2xl, .surface-reading .text-2xl { font-size: 22px; }
+.surface-about .mb-7 { margin-bottom: 18px; }
+.scene-layer[data-book-turning="about"] [data-book-inscription="about"],
+.scene-layer[data-book-turning="about"] [data-object-surface="about"],
+.scene-layer[data-book-turning="reading"] [data-book-inscription="reading"],
+.scene-layer[data-book-turning="reading"] [data-object-surface="reading"] { visibility: hidden; pointer-events: none; }
+.surface-about [aria-label="About sections"] { gap: 0; }
+.surface-about [aria-label="About sections"] button { padding-left: 8px; padding-right: 8px; font-size: 10px; }
+.surface-about .text-\[15px\] { font-size: 14px; }
+.surface-reading .h-40 { height: 130px; }
+.surface-reading .w-28 { width: 88px; }
+.surface-reading .mb-8 { margin-bottom: 22px; }
+@keyframes surface-arrive { 0%, 35% { opacity: 0; } 100% { opacity: 1; } }
+.object-label { position: relative; display: flex; align-items: center; gap: 9px; min-height: 34px; padding: 5px 10px; border: 1px solid #b6b6b6; background: #f6f6f6ed; color: #454545; white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 10px; transition: transform .3s cubic-bezier(.16,1,.3,1), background .2s, color .2s; }
+.object-label::after { content: ''; position: absolute; height: 17px; width: 1px; background: #a8a8a8; top: 100%; left: 50%; pointer-events: none; }
+.object-label:hover, .object-label:focus-visible, .object-label.is-hovered { background: #313131; color: #f6f6f6; transform: translateY(-3px); }
+.object-label:active { transform: scale(.98); }
+.object-number { opacity: .55; font-size: 9px; }
+.label-plus { margin-left: 4px; opacity: .55; }
+.detail-panel { width: 39%; max-width: 560px; right: 40px; top: 100px; bottom: 126px; border: 1px solid #cccccc; animation: panel-in .5s cubic-bezier(.16,1,.3,1) both; }
+.panel-scroll { scrollbar-width: thin; scrollbar-color: #b6b6b6 transparent; }
+.panel-scroll p, .panel-scroll h3 { overflow-wrap: anywhere; }
+.content-enter { animation: panel-in .28s cubic-bezier(.16,1,.3,1) both; }
+.desk-intro { opacity: var(--desk-opening-copy, 1); transform: translate3d(0, calc((1 - var(--desk-opening-copy, 1)) * 8px), 0); }
+.desk-dock { box-shadow: 0 5px 18px #31313107, inset 0 1px 0 #ffffff; }
+.desk-dock-button { transition: background .2s, color .2s, transform .25s cubic-bezier(.16,1,.3,1); touch-action: manipulation; }
+.desk-dock-button:hover { background: #e9e9e9; color: #313131; }
+.desk-dock-icon { transition: transform .35s cubic-bezier(.16,1,.3,1); }
+.desk-dock-shortcut { opacity: 0; transition: opacity .2s; }
+.desk-dock-button:hover .desk-dock-icon, .desk-dock-button:focus-visible .desk-dock-icon { transform: translateY(-2px); }
+.desk-dock-button:hover .desk-dock-shortcut, .desk-dock-button:focus-visible .desk-dock-shortcut, .desk-dock-button.is-active .desk-dock-shortcut { opacity: 1; }
+.desk-dock-button:active { transform: scale(.96); }
+.desk-dock-button.is-active { background: #313131; color: #f6f6f6; }
+.desk-app .desk-dock-button:focus-visible { outline-offset: -2px; outline-color: #777777; }
+.desk-dock-button:disabled { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .desk-dock-button, .desk-dock-icon, .desk-dock-shortcut { transition: none; } }
+.loading-monitor { animation: loading-pulse 1.2s ease-in-out infinite alternate; }
+.project-drawing { height: 170px; display: flex; align-items: center; justify-content: center; position: relative; border: 1px solid #b6b6b6; background-image: linear-gradient(#d9d9d933 1px, transparent 1px), linear-gradient(90deg, #d9d9d933 1px, transparent 1px); background-size: 20px 20px; overflow: hidden; }
+.project-drawing > span { font-size: 60px; font-weight: 300; }
+.project-drawing i { position: absolute; width: 112px; height: 112px; border: 1px solid #b6b6b6; border-radius: 50%; }
+.project-drawing i:last-child { transform: rotate(45deg); border-radius: 0; width: 82px; height: 82px; }
+.record-drawing { height: 200px; width: 200px; border: 1px solid #717171; border-radius: 50%; display: flex; align-items: center; justify-content: center; position: relative; background: repeating-radial-gradient(circle, transparent 0, transparent 7px, #bebebe33 8px, transparent 9px); }
+.record-drawing i { position: absolute; inset: 35px; border: 1px solid #a1a1a1; border-radius: 50%; }
+.record-drawing span { font-size: 24px; letter-spacing: -.06em; }
+.skip-link { position: absolute; left: 20px; top: 10px; z-index: 50; background: #f6f6f6; padding: 12px; transform: translateY(-200%); }
+.skip-link:focus { transform: translateY(0); }
+.reduce-motion *, .reduce-motion *::before, .reduce-motion *::after { animation: none !important; transition: none !important; }
+@keyframes panel-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes loading-pulse { from { opacity: .35; } to { opacity: 1; } }
+@media (max-width: 767px) {
+  .detail-panel { right: 20px; left: 20px; width: auto; max-width: none; top: 39dvh; bottom: 132px; }
+  .desk-intro { top: 105px; }
+  .desk-intro .eyebrow { font-size: 8px; }
+  .object-label { min-height: 44px; padding: 5px 8px; gap: 5px; font-size: 9px; }
+  .object-number { font-size: 8px; }
+  .label-plus { display: none; }
+  .desk-instructions { bottom: 143px; }
+  .detail-panel h2 { font-size: 29px; }
+}
+@media (max-height: 650px) and (min-width: 768px) {
+  .detail-panel { top: 85px; bottom: 115px; }
+  .desk-intro { top: 103px; }
+  .desk-intro h1 { font-size: 32px; }
+}
+
+.has-selection .desk-header { background: #f6f6f6; }
+
+.mobile-object-label { touch-action: none; }
+.mobile-object-label > span { transition: transform .2s cubic-bezier(.16,1,.3,1), color .2s, background .2s; }
+.mobile-object-label:active > span { transform: scale(.94); background: #313131; color: #f6f6f6; }
+.book-page-compact > header { gap: 6px; padding: 8px 10px; font-size: 7px; line-height: 1.5; }
+.book-page-compact > header > span:last-child { white-space: nowrap; }
+.book-page-compact > .surface-scroll { padding: 12px 10px; }
+.book-page-compact .surface-scroll p { font-size: 12px; line-height: 1.65; }
+.book-page-compact .surface-scroll h3 { font-size: 17px; line-height: 1.2; }
+.book-page-compact .surface-scroll .eyebrow { font-size: 7px; }
+.book-page-compact .surface-scroll .mt-5, .book-page-compact .surface-scroll .mt-4, .book-page-compact .surface-scroll .mt-3 { margin-top: 10px; }
+.book-page-compact .surface-scroll .mt-8 { margin-top: 16px; }
+.book-page-compact .surface-scroll .pt-5 { padding-top: 10px; }
+.book-page-compact .surface-scroll article.pl-5 { padding-left: 10px; }
+.book-page-compact .surface-scroll .space-y-7 > :not([hidden]) ~ :not([hidden]) { margin-top: 16px; }
+.book-page-compact > nav { gap: 3px; padding: 0 6px; font-size: 8px; }
+.book-page-compact > nav button { gap: 3px; white-space: nowrap; }
+.book-page-compact > nav svg { width: 11px; height: 11px; flex-shrink: 0; }
+.book-page-compact .surface-scroll .mb-6 { margin-bottom: 12px; }
+.book-page-compact .surface-scroll .pb-3 { padding-bottom: 8px; }
+.book-page-compact .surface-scroll .grid-cols-\[16px_minmax\(0\,1fr\)\] { grid-template-columns: 8px minmax(0, 1fr); gap: 6px; }
+.book-page-compact .surface-scroll .pl-3 { padding-left: 8px; }
+.book-page-compact .surface-scroll .space-y-6 > :not([hidden]) ~ :not([hidden]) { margin-top: 16px; }
+.book-inscription-compact > div:first-child, .book-inscription-compact > p:first-child { padding-bottom: 8px; }
+.book-inscription-compact > .mt-5, .book-inscription-compact > .mt-4 { margin-top: 8px; }
+.book-inscription-compact > .my-5 { margin-top: 8px; margin-bottom: 8px; }
+.book-inscription-compact > div:last-child { gap: 8px; padding-top: 6px; }
+.book-inscription-compact .space-y-4 > :not([hidden]) ~ :not([hidden]) { margin-top: 8px; }
+@media (max-width: 767px) and (max-height: 699px) {
+  .desk-intro { top: 92px; }
+  .desk-intro .eyebrow { margin-bottom: 8px; font-size: 7px; }
+  .desk-intro h1 { font-size: 28px; }
+  .desk-intro > p:last-child { margin-top: 8px; font-size: 11px; line-height: 1.5; }
+}
+
+.has-book .scene-layer, .has-book .scene-layer canvas, .has-book .surface-scroll { touch-action: pan-y pinch-zoom; }
+
+@media (max-width: 767px) and (max-height: 539px) {
+  .desk-intro { top: 84px; }
+  .desk-intro .eyebrow { margin-bottom: 6px; font-size: 6px; }
+  .desk-intro h1 { font-size: 25px; }
+  .desk-intro > p:last-child { margin-top: 6px; font-size: 10px; line-height: 1.4; }
+}
+
+/* These faces remain attached while the physical ID turns. */
+.contact-card { animation: none; }
+.miniature-hint { opacity: 0; transform: translate(-50%, -3px); transition: opacity .2s, transform .3s cubic-bezier(.16,1,.3,1); }
+.miniature-trigger:not(.is-mobile):hover .miniature-hint,
+.miniature-trigger:focus-visible .miniature-hint,
+.miniature-trigger:not(.is-mobile).is-hovered .miniature-hint { opacity: 1; transform: translate(-50%, 0); }
+.miniature-trigger:active { transform: scale(.98); }
+
+
+.badge-portrait { background-image: linear-gradient(#bdbdbd30 1px, transparent 1px), linear-gradient(90deg, #bdbdbd30 1px, transparent 1px); background-size: 14px 14px; }
+/* The badge is rendered outside the scene filter. Its photo keeps exactly
+   the light-mode image, paper and grid; only the surrounding badge changes. */
+.contact-card { opacity: calc(var(--desk-opening-screen, 1) * var(--desk-backdrop-opacity, 1)); }
+.contact-card[data-theme="dark"] { background-color: #171a1c; }
+.contact-card[data-theme="dark"] > header,
+.contact-card[data-theme="dark"] > button,
+.contact-card[data-theme="dark"][data-contact-face="back"] > .contact-card-body,
+.contact-card[data-theme="dark"][data-contact-face="front"] > .contact-card-body > div:not(.badge-portrait) { filter: url(#blueprint-dark-theme); }
+.contact-card button:focus-visible, .contact-card a:focus-visible { outline: 2px solid #454545; outline-offset: 3px; }
+
+/* One automatic arrival. The same scene, labels and screens stay mounted. */
+.desk-app.is-opening { --desk-opening-scene: 0; --desk-opening-copy: 0; --desk-opening-chrome: 0; --desk-opening-labels: 0; }
+.scene-layer canvas { opacity: var(--desk-opening-scene, 1); }
+.desk-footer, .desk-instructions, .reset-view { opacity: var(--desk-opening-chrome, 1); }
+.object-label, [data-mobile-annotations] { opacity: var(--desk-opening-labels, 1); }
+.surface-projects, .surface-music { opacity: calc(var(--desk-opening-screen, 1) * var(--desk-backdrop-opacity, 1)); }
+.is-opening .scene-layer, .is-opening .desk-footer, .is-opening .reset-view { pointer-events: none; }
+.is-opening .scene-layer canvas { cursor: default; }
+.is-opening .miniature-trigger { visibility: hidden; }
+.tifa-trigger { opacity: 0; pointer-events: none; white-space: nowrap; transition: opacity .25s, background .2s; }
+.tifa-trigger.is-ready { opacity: 1; pointer-events: auto; }
+.tifa-trigger:hover .tifa-label-face { background: #eaeaea; }
+.tifa-trigger:active .tifa-label-face { transform: scale(.98); }
+
+
+.tifa-conversation.is-open { animation: tifa-conversation-in .65s cubic-bezier(.16,1,.3,1) both; }
+.tifa-bubble, .tifa-user-bubble { position: relative; padding: 13px 16px; border: 1px solid #bdbdbd; border-radius: 12px; background: #f6f6f6; color: #343434; }
+.tifa-bubble::before { content: ''; position: absolute; left: -7px; bottom: 19px; width: 12px; height: 12px; border-left: 1px solid #bdbdbd; border-bottom: 1px solid #bdbdbd; background: #f6f6f6; transform: rotate(45deg); }
+.tifa-user-bubble { border-color: #d0d0d0; background: #ededed; border-bottom-right-radius: 2px; }
+@keyframes tifa-conversation-in { 0%, 20% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }
+@media (max-width: 767px) { .tifa-bubble, .tifa-user-bubble { padding: 11px 13px; } }
+@media (max-width: 767px) and (max-height: 549px) { .has-chat .desk-footer { display: none; } }
+.has-chat[data-chat-compact="true"] .desk-footer { display: none; }
+@media (prefers-reduced-motion: reduce) { .tifa-conversation.is-open { animation: none; } }
+
+
+/* Keep a usable scene between the toolbar and dock in landscape and other
+   short viewports. Camera fitting uses the same 108px / 80px clearances. */
+@media (max-height: 549px) {
+  .desk-app .desk-header { padding-top: 8px; padding-bottom: 8px; }
+  .desk-app .focus-toolbar { top: 60px; }
+  .desk-app .desk-footer { bottom: 8px; }
+  .desk-app .desk-dock { padding: 2px; }
+  .desk-app .desk-dock-button { min-height: 44px; gap: 2px; }
+  .desk-app .desk-dock-icon { width: 18px; height: 18px; }
+  .desk-app .desk-dock-button > span:last-child { font-size: 9px; }
+  .desk-app .desk-footer > div { margin-top: 4px; font-size: 8px; line-height: 12px; }
+  .desk-app .desk-intro { top: 76px; }
+  .desk-app .desk-intro .eyebrow, .desk-app .desk-intro > p:last-child { display: none; }
+  .desk-app .desk-intro h1 { font-size: 25px; }
+  .desk-app .desk-instructions, .desk-app .reset-view { bottom: 84px; }
+  .desk-app.has-chat .desk-footer { display: none; }
+}
