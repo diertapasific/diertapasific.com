@@ -21,6 +21,7 @@ async function load(file) {
   const url=dataUrl(code);modules.set(file.href,url);return url
 }
 const {nativePaperLayout,writingReaderAvailable}=await import(await load(new URL('../src/desk/nativePaperLayout.ts',import.meta.url)))
+const {nativeReadingImageLayout}=await import(await load(new URL('../src/desk/nativeReadingScene.ts',import.meta.url)))
 const {focusView}=await import(await load(new URL('../src/desk/model.ts',import.meta.url)))
 const {ArticlePage}=await import(await load(new URL('../src/desk/ArticlePage.tsx',import.meta.url)))
 const {POSTS}=await import(await load(new URL('../src/data/posts.ts',import.meta.url)))
@@ -85,5 +86,20 @@ test('both paper palettes keep body and heading ink readable against their backg
       const ink=luminance(color(name)),ratio=(Math.max(paper,ink)+.05)/(Math.min(paper,ink)+.05)
       assert.ok(ratio>=4.5,`${name} contrast is readable`)
     }
+  }
+})
+
+
+test('the retained scene image follows the physical paper through resizing and rotation',()=>{
+  for(const [oldWidth,oldHeight] of sizes)for(const [width,height] of sizes){
+    const view=focusView('writing',oldWidth,oldHeight),after=nativePaperLayout(width,height)
+    const before={left:(oldWidth-1.15*view.zoom)/2,top:(oldHeight-1.6*view.zoom)/2-view.shift,width:1.15*view.zoom,height:1.6*view.zoom}
+    const frame=nativeReadingImageLayout({width:oldWidth,height:oldHeight},width,height)
+    const scale=frame.width/oldWidth
+    assert.ok(Math.abs(frame.left+before.left*scale-after.left)<1e-8,'paper left edge stays aligned')
+    assert.ok(Math.abs(frame.top+before.top*scale-after.top)<1e-8,'paper top edge stays aligned')
+    assert.ok(Math.abs(before.width*scale-after.width)<=.5,'paper width stays aligned')
+    assert.ok(Math.abs(before.height*scale-after.height)<=.5,'paper height stays within half a pixel')
+    assert.ok(frame.width>0&&frame.height>0)
   }
 })
