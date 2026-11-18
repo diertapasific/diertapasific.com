@@ -57,7 +57,7 @@ const ArticleFace = memo(function ArticleFace({ index }: { index: number }) {
   return <mesh position={[0, .011, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[1.15, 1.6]} /><meshBasicMaterial map={texture} /></mesh>
 })
 
-function ArticleSurface({ index, onSelect, elementRef, interactive }: { index: number; onSelect: (index: number) => void; elementRef: RefObject<HTMLDivElement>; interactive: boolean }) {
+function ArticleSurface({ index, onSelect, elementRef, interactive, dark }: { dark: boolean; index: number; onSelect: (index: number) => void; elementRef: RefObject<HTMLDivElement>; interactive: boolean }) {
   const { size } = useThree(), heading = useRef<HTMLHeadingElement>(null), sheetNav = useRef<HTMLElement>(null)
   const { zoom } = focusView('writing', size.width, size.height)
   const width = Math.round(1.15 * zoom), height = Math.round(1.6 * zoom), post = POSTS[index]
@@ -69,8 +69,8 @@ function ArticleSurface({ index, onSelect, elementRef, interactive }: { index: n
     const nav = sheetNav.current, selected = nav?.querySelector<HTMLElement>('[aria-pressed="true"]')
     if (nav && selected) nav.scrollLeft = selected.offsetLeft - nav.offsetLeft - (nav.clientWidth - selected.offsetWidth) / 2
   }, [index, width])
-  return <ProjectedSurface position={[0, .015, 0]} rotation={[-Math.PI / 2, 0, 0]} worldSize={[1.15, 1.6]} pixelWidth={width} pixelHeight={height} layer={interactive ? 8 : 9} interactive={interactive}>
-    <div ref={elementRef} data-object-surface={interactive ? 'writing' : undefined} data-article-index={index} aria-hidden={!interactive || undefined} className="flex flex-col overflow-hidden bg-[#f8f8f8] font-sans text-[#2a2a2a]" style={{ width, height, touchAction: 'auto', pointerEvents: interactive ? 'auto' : 'none' }} onKeyDown={event => {
+  return <ProjectedSurface nativeColors nativeLayout position={[0, .015, 0]} rotation={[-Math.PI / 2, 0, 0]} worldSize={[1.15, 1.6]} pixelWidth={width} pixelHeight={height} layer={interactive ? 8 : 9} interactive={interactive}>
+    <div ref={elementRef} data-theme={dark ? 'dark' : 'light'} data-object-surface={interactive ? 'writing' : undefined} data-article-index={index} aria-hidden={!interactive || undefined} className="writing-sheet flex flex-col overflow-hidden font-sans" style={{ width, height, touchAction: 'auto', pointerEvents: interactive ? 'auto' : 'none' }} onKeyDown={event => {
       if (!interactive) return
       const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
       if (step && POSTS[index + step] && !event.metaKey && !event.ctrlKey && !event.altKey) { event.preventDefault(); onSelect(index + step) }
@@ -88,7 +88,7 @@ function ArticleSurface({ index, onSelect, elementRef, interactive }: { index: n
   </ProjectedSurface>
 }
 
-const ArticleSheet = memo(function ArticleSheet({ index, outgoing, active, turning, deck, motion, onSelect }: { index: number; outgoing: boolean; active: boolean; turning: boolean; deck: MutableRefObject<PaperDeck>; motion: MutableRefObject<DeskMotion>; onSelect: (index: number) => void }) {
+const ArticleSheet = memo(function ArticleSheet({ index, outgoing, active, turning, deck, motion, onSelect, dark }: { dark: boolean; index: number; outgoing: boolean; active: boolean; turning: boolean; deck: MutableRefObject<PaperDeck>; motion: MutableRefObject<DeskMotion>; onSelect: (index: number) => void }) {
   const sheet = useRef<THREE.Group>(null), page = useRef<HTMLDivElement>(null)
   useFrame(() => {
     const pose = articleTurnPose(deck.current.progress)
@@ -98,11 +98,11 @@ const ArticleSheet = memo(function ArticleSheet({ index, outgoing, active, turni
   }, -.5)
   return <group ref={sheet} position={[0, .2325, 0]}>
     <Block size={[1.2, .014, 1.65]} ink="#999999" color="#f8f8f8" />
-    {active ? <ArticleSurface index={index} onSelect={onSelect} elementRef={page} interactive={!outgoing} /> : <ArticleFace index={index} />}
+    {active ? <ArticleSurface dark={dark} index={index} onSelect={onSelect} elementRef={page} interactive={!outgoing} /> : <ArticleFace index={index} />}
   </group>
 })
 
-export function ArticlePapers({ active, motion, reducedMotion }: { active: boolean; motion: MutableRefObject<DeskMotion>; reducedMotion: boolean }) {
+export function ArticlePapers({ active, motion, reducedMotion, dark }: { dark: boolean; active: boolean; motion: MutableRefObject<DeskMotion>; reducedMotion: boolean }) {
   const deck = useRef(createPaperDeck())
   const [presentation, setPresentation] = useState({ index: 0, from: null as number | null })
   const previous = useRef(presentation)
@@ -122,7 +122,7 @@ export function ArticlePapers({ active, motion, reducedMotion }: { active: boole
       return <group key={rank} position={[0, pose.height, 0]} rotation={[0, pose.yaw, 0]}><Block size={[1.2, .014, 1.65]} ink="#a4a4a4" color="#f8f8f8" /></group>
     })}
     {/* Stable article keys keep the outgoing DOM and scroll position alive. */}
-    {(from === null ? [presentation.index] : [from, presentation.index]).map(index => <ArticleSheet key={index} index={index} outgoing={index === from} active={active} turning={turning} deck={deck} motion={motion} onSelect={select} />)}
+    {(from === null ? [presentation.index] : [from, presentation.index]).map(index => <ArticleSheet dark={dark} key={index} index={index} outgoing={index === from} active={active} turning={turning} deck={deck} motion={motion} onSelect={select} />)}
     <group position={[.75, .14, -.05]} rotation={[Math.PI / 2, 0, -.12]}><mesh><cylinderGeometry args={[.022, .022, .92, 12]} /><meshBasicMaterial color="#aaa" /></mesh><Block size={[.025, .15, .025]} position={[.025, .28, 0]} /></group>
   </group>
 }
