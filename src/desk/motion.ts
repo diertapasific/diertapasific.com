@@ -7,15 +7,17 @@ export const bookPoses: Record<'about' | 'reading', { rest: Point; open: Point }
 export const deskSize: Point = [10.4, .16, 5.4]
 // Dimension guides sit in front of the floor mat and on the far side of Tifa.
 export const deskDimensionLines = { widthZ: deskSize[2] / 2 + 1, heightX: deskSize[0] / 2 + .4, heightZ: deskSize[2] / 2 - .3 }
+// One centerline for the screen, shelf, keyboard, and mat.
+export const workstationCenterX = 0
 export const monitorDepth = -1.3
 export const paperPosition: Point = [4.05, 0, 1.55]
-export const keyboardPosition: Point = [-.5, .19, 1.18]
-export const deskmatPosition: Point = [-.12, .098, 1.17]
+export const keyboardPosition: Point = [workstationCenterX, .19, 1.18]
+export const deskmatPosition: Point = [workstationCenterX, .098, keyboardPosition[2]]
 export const speakerScale = .72
 export const speakerPosition: Point = [-4, .804, -1.65]
 export const speakerViewOffset: Point = [0, 2.1, 9]
 export const mouseScale = .74
-export const mousePosition: Point = [1.45, .12, 1.25]
+export const mousePosition: Point = [workstationCenterX + 1.65, .12, keyboardPosition[2]]
 export const speakerScreen: Point = [0, .15, .393]
 export const deskControlPosition: Point = [-4, -.15, 2.72]
 export const cardPoses = { rest: [3.65, -.57, 2.80] as Point, open: [3.65, .5, 3.4] as Point }

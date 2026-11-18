@@ -9,7 +9,7 @@ import { OBB } from 'three/addons/math/OBB.js'
 // test dependency. Bounds conservatively enclose the rounded scene geometry.
 const source = await readFile(new URL('../src/desk/motion.ts', import.meta.url), 'utf8')
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText
-const { advanceDeskMotion, bookPose, cardPose, contentIsReady, createDeskMotion, motionProgress, paperPose, speakerPosition, speakerScale, speakerViewOffset, mousePosition, mouseScale, deskSize, deskControlPosition, bookPoses, monitorDepth, paperPosition, keyboardPosition, deskmatPosition } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
+const { advanceDeskMotion, bookPose, cardPose, contentIsReady, createDeskMotion, motionProgress, paperPose, speakerPosition, speakerScale, speakerViewOffset, mousePosition, mouseScale, deskSize, deskControlPosition, bookPoses, monitorDepth, workstationCenterX, paperPosition, keyboardPosition, deskmatPosition } = await import(`data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}`)
 const modelSource = await readFile(new URL('../src/desk/model.ts', import.meta.url), 'utf8')
 const modelCode = ts.transpileModule(modelSource, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText.replace("'./motion'", `'data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}'`)
 const { focusView, overviewView, overviewPose } = await import(`data:text/javascript;base64,${Buffer.from(modelCode).toString('base64')}`)
@@ -38,20 +38,20 @@ function bookBounds(id, pose) {
   ]
 }
 
-const monitorRoot = transform([0, 0, monitorDepth + 1])
+const monitorRoot = transform([workstationCenterX, 0, monitorDepth + 1])
 const speakerRoot = transform(speakerPosition, [0, 0, 0], speakerScale)
 const stationary = [
   box('desk', 'tabletop', deskSize, [0, 0, 0]),
   box('desk', 'height controller', [.72, .23, .15], deskControlPosition),
   box('mat', 'deskmat', [4.7, .018, 1.82], deskmatPosition),
-  box('projects', 'monitor', [4.4, 1.92, .12], [.2, 1.57, -1], [0, 0, 0], monitorRoot),
-  box('projects', 'monitor clamp', [.26, .14, .36], [.2, .06, -2.34], [0, 0, 0], monitorRoot),
-  box('projects', 'monitor arm stem', [.12, 1.20, .12], [.2, .72, -2.27], [0, 0, 0], monitorRoot),
-  box('projects', 'monitor arm lower link', [.14, .14, .76], [.2, 1.32, -1.96], [-.12, 0, 0], monitorRoot),
-  box('projects', 'monitor arm upper link', [.13, .13, .60], [.2, 1.42, -1.37], [-.20, 0, 0], monitorRoot),
-  box('projects', 'monitor VESA mount', [.30, .34, .10], [.2, 1.57, -1.11], [0, 0, 0], monitorRoot),
-  box('shelf', 'monitor shelf', [4.4, .08, 1.12], [.2, .31, -.93], [0, 0, 0], monitorRoot),
-  ...[-1.8, 1.8].map(x => box('shelf', 'shelf foot', [.14, .19, .84], [x + .2, .175, -.93], [0, 0, 0], monitorRoot)),
+  box('projects', 'monitor', [4.4, 1.92, .12], [0, 1.57, -1], [0, 0, 0], monitorRoot),
+  box('projects', 'monitor clamp', [.26, .14, .36], [0, .06, -2.34], [0, 0, 0], monitorRoot),
+  box('projects', 'monitor arm stem', [.12, 1.20, .12], [0, .72, -2.27], [0, 0, 0], monitorRoot),
+  box('projects', 'monitor arm lower link', [.14, .14, .76], [0, 1.32, -1.96], [-.12, 0, 0], monitorRoot),
+  box('projects', 'monitor arm upper link', [.13, .13, .60], [0, 1.42, -1.37], [-.20, 0, 0], monitorRoot),
+  box('projects', 'monitor VESA mount', [.30, .34, .10], [0, 1.57, -1.11], [0, 0, 0], monitorRoot),
+  box('shelf', 'monitor shelf', [4.4, .08, 1.12], [0, .31, -.93], [0, 0, 0], monitorRoot),
+  ...[-1.8, 1.8].map(x => box('shelf', 'shelf foot', [.14, .19, .84], [x, .175, -.93], [0, 0, 0], monitorRoot)),
   box('keyboard', 'keyboard', [2.2, .12, .98], [keyboardPosition[0], keyboardPosition[1] + .015, keyboardPosition[2]], [-.055, 0, 0]),
   box('mouse', 'mouse including wheels', [.84, .42, .99], [-.05, .21, 0], [0, 0, 0], transform(mousePosition, [0, -.1, 0], mouseScale)),
   box('shelf-items', 'Formula 1 miniature', [.98, .235, .43], [-.84, .4675, -.61], [0, 0, 0], monitorRoot),
