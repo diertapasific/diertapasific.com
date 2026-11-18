@@ -32,9 +32,12 @@ import { advanceCameraMotion, createCameraMotion } from './cameraMotion'
 import { SceneDevProbe } from './SceneDevTools'
 import { NativeReadingCapture } from './NativeReadingCapture'
 import type { NativeReadingFrame } from './nativeReadingScene'
+import { landReadingCamera, readingReturnDelta } from './readingCamera'
+
+const initialCamera = { position: [8, 8, 12] as Point, zoom: 70, near: .1, far: 100 }
 
 type SceneProps = {
-  readingFrame: NativeReadingFrame | null; readingPaused: boolean; onReadingFrame: (frame: NativeReadingFrame) => void;
+  readingFrame: NativeReadingFrame | null; onReadingFrame: (frame: NativeReadingFrame) => void;
   nativeWriting: boolean; writingIndex: number; onWritingIndex: (index: number) => void;
   dark: boolean; selected: Destination | null; onSelect: (id: Destination) => void; aboutSection: AboutSection; onAboutSection: (section: AboutSection) => void;
   reducedMotion: boolean; reset: number; zoomStep: number; standing: boolean; surface: RefObject<HTMLDivElement>; onReady: () => void; onFailure: (reason: 'context-lost' | 'load-timeout' | 'render-error') => void;
@@ -179,6 +182,7 @@ const Ground = memo(function Ground() {
 function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, openingMode, opening, chatOpen, readingFrame }: Pick<SceneProps, 'selected' | 'reducedMotion' | 'standing' | 'openingMode' | 'chatOpen' | 'readingFrame'> & { orbit: MutableRefObject<{ x: number; y: number; zoom: number }>; annotationPlan: MutableRefObject<AnnotationPlan | null>; opening: MutableRefObject<OpeningTimeline> }) {
   const { camera, size } = useThree()
   const start = useRef(true), travel = useMemo(createCameraMotion, [])
+  const returnFrames = useRef(readingFrame ? 8 : 0)
   const target = useMemo(() => new THREE.Vector3(), []), position = useMemo(() => new THREE.Vector3(), [])
   const focusUp = useMemo(() => new THREE.Vector3(), []), focusDirection = useMemo(() => new THREE.Vector3(), [])
   const up = useMemo(() => new THREE.Vector3(0, 1, 0), [])
@@ -214,51 +218,42 @@ function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, o
       }
       target.set(...view.target); position.set(...view.position); zoom = view.zoom
     }
-    advanceCameraMotion(cam, travel, position, target, up, zoom, delta, reducedMotion || start.current || Boolean(readingFrame))
+    const recovering = !readingFrame && returnFrames.current > 0
+    advanceCameraMotion(cam, travel, position, target, up, zoom, readingReturnDelta(delta, recovering), reducedMotion || start.current || Boolean(readingFrame))
+    if (recovering) returnFrames.current--
     start.current = false
   })
   return null
 }
 
-function Ready({ onReady, onFailure, intentionalLoss, paused, onContextReady }: Pick<SceneProps, 'onReady' | 'onFailure'> & { intentionalLoss: MutableRefObject<boolean>; paused: boolean; onContextReady: (ready: boolean) => void }) {
+function Ready({ onReady, onFailure, readingFrame }: Pick<SceneProps, 'onReady' | 'onFailure' | 'readingFrame'>) {
   const { gl } = useThree()
-  const pausedNow = useRef(paused), delta = useRef(0)
+  const restarting = useRef(Boolean(readingFrame)).current, delta = useRef(0)
   useFrame((_, dt) => { delta.current = dt })
   useLayoutEffect(() => {
-    pausedNow.current = paused
-    if (!paused && intentionalLoss.current) gl.forceContextRestore()
-  }, [gl, paused, intentionalLoss])
-  useEffect(() => {
-    let notified = false, frames = 0, required = 1, lastFrame = gl.info.render.frame
+    let notified = false, frames = 0, lastFrame = gl.info.render.frame
+    const started = performance.now()
     const stop = addAfterEffect(() => {
       const current = gl.info.render.frame
       if (notified || current === lastFrame || gl.getContext().isContextLost() || (import.meta.env.DEV && new URLSearchParams(window.location.search).get('scene-checks') === 'timeout')) return
       lastFrame = current; frames++
-      // Rebuild GPU resources behind the retained image, absorbing the long
-      // shader-compilation frame before starting the return camera movement.
-      if (frames < required || (required > 1 && delta.current > .08 && frames < 12)) return
+      // Keep the copied paper view until the fresh renderer has warmed up.
+      // The camera stays at Writing until this completes, then travels normally.
+      if (restarting && (frames < 3 || delta.current > .08) && performance.now() - started < 350) return
       notified = true; onReady()
     })
     const lost = (event: Event) => {
       event.preventDefault()
-      if (!intentionalLoss.current) { onFailure('context-lost'); return }
-      notified = false; frames = 0; required = 3; onContextReady(false)
-    }
-    const restored = () => {
-      if (pausedNow.current) { gl.forceContextLoss(); return }
-      intentionalLoss.current = false
-      notified = false; frames = 0; required = 3; lastFrame = gl.info.render.frame
-      onContextReady(true)
+      onFailure('context-lost')
     }
     gl.domElement.addEventListener('webglcontextlost', lost)
-    gl.domElement.addEventListener('webglcontextrestored', restored)
-    return () => { stop(); gl.domElement.removeEventListener('webglcontextlost', lost); gl.domElement.removeEventListener('webglcontextrestored', restored) }
-  }, [gl, onReady, onFailure, intentionalLoss, onContextReady])
+    return () => { stop(); gl.domElement.removeEventListener('webglcontextlost', lost) }
+  }, [gl, onReady, onFailure, restarting])
   return null
 }
 
-function AnimatedDesk(props: SceneProps & { annotationPlan: MutableRefObject<AnnotationPlan | null>; motion: MutableRefObject<DeskMotion>; orbit: MutableRefObject<{ x: number; y: number; zoom: number }>; suppressClickUntil: MutableRefObject<number>; opening: MutableRefObject<OpeningTimeline>; intentionalLoss: MutableRefObject<boolean>; onContextReady: (ready: boolean) => void }) {
-  const [presentation, setPresentation] = useState<{ id: Destination | null; ready: boolean }>({ id: null, ready: false })
+function AnimatedDesk(props: SceneProps & { annotationPlan: MutableRefObject<AnnotationPlan | null>; motion: MutableRefObject<DeskMotion>; orbit: MutableRefObject<{ x: number; y: number; zoom: number }>; suppressClickUntil: MutableRefObject<number>; opening: MutableRefObject<OpeningTimeline> }) {
+  const [presentation, setPresentation] = useState<{ id: Destination | null; ready: boolean }>(() => ({ id: props.motion.current.id, ready: contentIsReady(props.motion.current, props.selected) }))
   const previous = useRef(presentation)
   const captureFailure = useCallback(() => props.onFailure('render-error'), [props.onFailure])
   useFrame((_, delta) => {
@@ -269,19 +264,17 @@ function AnimatedDesk(props: SceneProps & { annotationPlan: MutableRefObject<Ann
       setPresentation(next)
     }
   }, -2)
-  return <><CameraRig {...props} /><Ground /><DeskOpening mode={props.openingMode} timeline={props.opening} height={deskHeight(props.standing)} surface={props.surface} onComplete={props.onOpeningComplete}><DeskBackdrop chatting={Boolean(props.chatOpen)} openingMode={props.openingMode}><Desk {...props} selected={presentation.id} contentReady={presentation.ready} /></DeskBackdrop><TifaCompanion dark={props.dark} enabled={!props.selected&&!props.chatOpen&&props.openingMode==='none'} chatting={Boolean(props.chatOpen)} replyPulse={props.replyPulse??0} onAsk={props.onAsk} suppressClickUntil={props.suppressClickUntil} reducedMotion={props.reducedMotion} /></DeskOpening><Ready onReady={props.onReady} onFailure={props.onFailure} intentionalLoss={props.intentionalLoss} paused={props.readingPaused} onContextReady={props.onContextReady} />{!props.readingFrame && props.nativeWriting && props.selected === 'writing' && <NativeReadingCapture motion={props.motion} standing={props.standing} intentionalLoss={props.intentionalLoss} onCapture={props.onReadingFrame} onFailure={captureFailure} />}</>
+  return <><CameraRig {...props} /><Ground /><DeskOpening mode={props.openingMode} timeline={props.opening} height={deskHeight(props.standing)} surface={props.surface} onComplete={props.onOpeningComplete}><DeskBackdrop chatting={Boolean(props.chatOpen)} openingMode={props.openingMode}><Desk {...props} selected={presentation.id} contentReady={presentation.ready} /></DeskBackdrop><TifaCompanion dark={props.dark} enabled={!props.selected&&!props.chatOpen&&props.openingMode==='none'} chatting={Boolean(props.chatOpen)} replyPulse={props.replyPulse??0} onAsk={props.onAsk} suppressClickUntil={props.suppressClickUntil} reducedMotion={props.reducedMotion} /></DeskOpening><Ready onReady={props.onReady} onFailure={props.onFailure} readingFrame={props.readingFrame} />{!props.readingFrame && props.nativeWriting && props.selected === 'writing' && <NativeReadingCapture motion={props.motion} standing={props.standing} onCapture={props.onReadingFrame} onFailure={captureFailure} />}</>
 }
 
 export default function DeskScene(props: SceneProps) {
   const { orbit, suppressClickUntil } = useDeskDrag(props.surface, !props.selected && !props.chatOpen && props.openingMode === 'none', props.reset, props.zoomStep)
-  const motion = useRef(createDeskMotion())
-  const [contextReady, setContextReady] = useState(true)
-  const intentionalLoss = useRef(false)
+  const motion = useRef<DeskMotion>(props.readingFrame ? { id: 'writing', progress: 1 } : createDeskMotion())
   const opening = useRef(createOpeningTimeline(props.openingMode))
   const annotationPlan = useRef<AnnotationPlan | null>(null)
-  return <Canvas frameloop={props.readingPaused || !contextReady ? 'never' : 'always'} flat orthographic camera={{ position: [8, 8, 12], zoom: 70, near: .1, far: 100 }} dpr={[1, 2]} gl={{ antialias: true, alpha: true, localClippingEnabled: true }}>
-    {import.meta.env.DEV && new URLSearchParams(window.location.search).has('scene-checks') && <SceneDevProbe />}
+  return <Canvas frameloop="always" flat orthographic camera={initialCamera} onCreated={({ camera, size }) => { if (props.readingFrame) landReadingCamera(camera as THREE.OrthographicCamera, size.width, size.height, props.standing) }} dpr={[1, 2]} gl={{ antialias: true, alpha: true, localClippingEnabled: true }}>
     <FocusDismiss focus={props.openingMode === 'none' ? props.chatOpen ? 'tifa' : props.selected : null} onDismiss={props.onDismiss} />
-    <AnimatedDesk {...props} onContextReady={setContextReady} intentionalLoss={intentionalLoss} opening={opening} annotationPlan={annotationPlan} motion={motion} orbit={orbit} suppressClickUntil={suppressClickUntil} />
+    <AnimatedDesk {...props} opening={opening} annotationPlan={annotationPlan} motion={motion} orbit={orbit} suppressClickUntil={suppressClickUntil} />
+    {import.meta.env.DEV && new URLSearchParams(window.location.search).has('scene-checks') && <SceneDevProbe />}
   </Canvas>
 }

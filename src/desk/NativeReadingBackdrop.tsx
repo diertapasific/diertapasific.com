@@ -1,12 +1,20 @@
 'use client'
 
-import { useLayoutEffect, useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import { nativeReadingImageLayout } from './nativeReadingScene'
 import type { NativeReadingFrame } from './nativeReadingScene'
 
 export function NativeReadingBackdrop({ frame, surface }: { frame: NativeReadingFrame; surface: RefObject<HTMLDivElement> }) {
+  const bitmap = useRef<HTMLCanvasElement>(null)
   const [size, setSize] = useState({ width: frame.width, height: frame.height })
+  useLayoutEffect(() => {
+    const node = bitmap.current
+    if (!node) return
+    node.width = frame.pixels.width; node.height = frame.pixels.height
+    node.getContext('2d', { willReadFrequently: true })?.putImageData(frame.pixels, 0, 0)
+    return () => { node.width = 0; node.height = 0 }
+  }, [frame])
   useLayoutEffect(() => {
     const node = surface.current
     if (!node) return
@@ -19,5 +27,5 @@ export function NativeReadingBackdrop({ frame, surface }: { frame: NativeReading
     observer.observe(node)
     return () => observer.disconnect()
   }, [surface])
-  return <img data-reading-backdrop src={frame.image} alt="" aria-hidden="true" draggable={false} className="pointer-events-none absolute max-w-none" style={nativeReadingImageLayout(frame, size.width, size.height)} />
+  return <canvas data-reading-backdrop ref={bitmap} aria-hidden="true" className="pointer-events-none absolute max-w-none" style={nativeReadingImageLayout(frame, size.width, size.height)} />
 }

@@ -22,6 +22,7 @@ async function load(file) {
 }
 const {nativePaperLayout,writingReaderAvailable}=await import(await load(new URL('../src/desk/nativePaperLayout.ts',import.meta.url)))
 const {nativeReadingImageLayout}=await import(await load(new URL('../src/desk/nativeReadingScene.ts',import.meta.url)))
+const {landReadingCamera,readingReturnDelta}=await import(await load(new URL('../src/desk/readingCamera.ts',import.meta.url)))
 const {focusView}=await import(await load(new URL('../src/desk/model.ts',import.meta.url)))
 const {ArticlePage}=await import(await load(new URL('../src/desk/ArticlePage.tsx',import.meta.url)))
 const {POSTS}=await import(await load(new URL('../src/data/posts.ts',import.meta.url)))
@@ -39,11 +40,7 @@ test('the native reader matches the same physical paper and guided camera to one
   for(const [width,height] of sizes){
     const view=focusView('writing',width,height),layout=nativePaperLayout(width,height)
     const camera=new OrthographicCamera(-width/2,width/2,height/2,-height/2,.1,100)
-    const target=new Vector3(...view.target);target.y+=3.1
-    const direction=new Vector3(...view.offset).normalize(),up=new Vector3(0,0,-1)
-    target.add(up.clone().projectOnPlane(direction).normalize().multiplyScalar(-view.shift/view.zoom))
-    camera.position.copy(target).add(new Vector3(...view.offset));camera.up.copy(up);camera.lookAt(target)
-    camera.zoom=view.zoom;camera.updateProjectionMatrix();camera.updateMatrixWorld()
+    landReadingCamera(camera,width,height,true)
     const corner=new Vector3(4.05-1.15/2,3.1+.565,1.55-1.6/2).project(camera)
     assert.ok(Math.abs((corner.x+1)*width/2-layout.left)<1)
     assert.ok(Math.abs((1-corner.y)*height/2-layout.top)<1)
@@ -101,5 +98,19 @@ test('the retained scene image follows the physical paper through resizing and r
     assert.ok(Math.abs(before.width*scale-after.width)<=.5,'paper width stays aligned')
     assert.ok(Math.abs(before.height*scale-after.height)<=.5,'paper height stays within half a pixel')
     assert.ok(frame.width>0&&frame.height>0)
+  }
+})
+
+
+test('a delayed fresh-renderer frame cannot skip the return camera movement',async()=>{
+  const {createCameraMotion,advanceCameraMotion}=await import(await load(new URL('../src/desk/cameraMotion.ts',import.meta.url)))
+  for(const delay of [.5,2]){
+    const camera=new OrthographicCamera(),motion=createCameraMotion()
+    landReadingCamera(camera,440,956,true)
+    const from=camera.position.clone(),target=new Vector3(0,3.1,0),position=new Vector3(8,8,12),up=new Vector3(0,1,0)
+    advanceCameraMotion(camera,motion,position,target,up,30,readingReturnDelta(delay,true))
+    const fraction=camera.position.distanceTo(from)/from.distanceTo(position)
+    assert.ok(fraction>0&&fraction<.25,'the first resumed frame moves gradually after a shader stall')
+    assert.equal(readingReturnDelta(delay,false),delay,'ordinary navigation keeps elapsed-time behavior')
   }
 })
