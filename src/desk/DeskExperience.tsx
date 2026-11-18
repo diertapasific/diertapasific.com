@@ -67,12 +67,19 @@ export default function DeskExperience() {
   const isolatedWriting = paperCheck && selected === 'writing'
   const readingScene = nativeWriting && selected === 'writing' && !failed && !isolatedWriting
   const scenePaused = isolatedWriting || (readingScene && readingFrame !== null)
+  const captureActive = useRef(readingScene)
+  useLayoutEffect(() => { captureActive.current = readingScene }, [readingScene])
   const writingOpen = writingReaderAvailable(selected, nativeWriting, failed || isolatedWriting)
   const chatOpen=Boolean(route.companion),focused=Boolean(selected)||chatOpen
   const opening = openingMode !== 'none' && !failed
   const active = destinations.find(item => item.id === selected)
   const onReady = useCallback(() => { setReady(true); setReadingFrame(null) }, [])
-  const onReadingFrame = useCallback((frame: NativeReadingFrame) => { setReady(false); setReadingFrame(frame) }, [])
+  const onReadingFrame = useCallback((frame: NativeReadingFrame) => {
+    // Navigation may commit before the separate scene root receives new props.
+    // A late capture must not lock another destination to the Writing camera.
+    if (!captureActive.current) return
+    setReady(false); setReadingFrame(frame)
+  }, [])
   const onFailure = useCallback((reason: 'context-lost' | 'load-timeout' | 'render-error' = 'render-error') => {
     console.warn('desk_scene_failed', reason)
     setFailure(reason); setReadingFrame(null); setReady(false); setOpeningMode('none')
