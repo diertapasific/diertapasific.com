@@ -55,7 +55,7 @@ export function ContactCard({ dark, back, enabled, turning, onFlip, width, heigh
     </div>}
     <button onClick={onFlip} disabled={turning} aria-label={back ? 'Flip ID to the front' : 'Flip ID for contact info'} className="group flex min-h-11 shrink-0 items-center justify-between gap-3 border-t border-zinc-300 px-3 text-left font-mono text-zinc-600 transition-colors hover:bg-zinc-200/30 active:scale-[.98] disabled:opacity-50">
       <span className="flex flex-col gap-0.5"><span className="text-[10px] uppercase leading-none tracking-[.05em]">{back ? 'Portrait' : 'Contact details'}</span><span className="text-[8px] leading-none text-zinc-400">{back ? 'flip to the front' : 'flip card to view'}</span></span>
-      <span aria-hidden="true" className="grid size-6 shrink-0 place-items-center rounded-full border border-zinc-300"><ArrowsClockwise size={14} className="transition-transform duration-300 group-hover:rotate-12" /></span>
+      <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full border border-[#343434] bg-[#343434] text-[#f6f6f6] transition-colors group-hover:border-[#484848] group-hover:bg-[#484848]"><ArrowsClockwise size={18} weight="regular" className="transition-transform duration-300 group-hover:rotate-12" /></span>
     </button>
   </div>
 }
