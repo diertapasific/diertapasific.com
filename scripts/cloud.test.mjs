@@ -10,12 +10,18 @@ const json = (data, status = 200, headers = {}) => Response.json(data, { status,
 const request = () => new Request('https://desk.example/api/spotify/now-playing')
 function memoryStore() {
   const values = new Map(), leases = new Map(), counts = new Map()
-  return { configured: true, values, leases,
+  return { configured: true, values, leases, counts,
     async get(key) { return values.get(key) || null },
     async set(key, value) { values.set(key, structuredClone(value)) },
     async acquire(key) { if (leases.has(key)) return null; const lease = 'lease'; leases.set(key, lease); return lease },
     async release(key, lease) { if (leases.get(key) === lease) leases.delete(key) },
     async observe(value) { if (!values.get('spotify:observed') || value.observedAt >= values.get('spotify:observed').observedAt) values.set('spotify:observed', structuredClone(value)) },
+    async quotaAll(windows) {
+      const denied = windows.filter(window => (counts.get(window.name) || 0) >= window.limit)
+      if (denied.length) return { allowed: false, retryAfter: Math.max(...denied.map(window => window.seconds)) }
+      windows.forEach(window => counts.set(window.name, (counts.get(window.name) || 0) + 1))
+      return { allowed: true, retryAfter: 1 }
+    },
     async quota(key, limit) { const count = (counts.get(key) || 0) + 1; counts.set(key, count); return { allowed: count <= limit, retryAfter: 60 } },
   }
 }
@@ -78,13 +84,59 @@ test('Redis transport keeps its credential in the header and uses atomic leases 
   const fetcher = async (url, init) => {
     assert.equal(url, 'https://redis.example'); assert.equal(init.headers.Authorization, 'Bearer redis-private')
     const command = JSON.parse(init.body); commands.push(command)
-    return json({ result: command[0] === 'GET' ? JSON.stringify({ track: 'test' }) : command[0] === 'EVAL' && command[1].includes('INCR') ? [9, 42] : 'OK' })
+    return json({ result: command[0] === 'GET' ? JSON.stringify({ track: 'test' }) : command[0] === 'EVAL' && command[1].includes('local retry') ? [0, 7200] : command[0] === 'EVAL' && command[1].includes('INCR') ? [9, 42] : 'OK' })
   }
   const store = createCloudStore({ UPSTASH_REDIS_REST_URL: 'https://redis.example', UPSTASH_REDIS_REST_TOKEN: 'redis-private', VERCEL_ENV: 'production' }, fetcher)
   assert.deepEqual(await store.get('snapshot'), { track: 'test' })
   const lease = await store.acquire('poll'); assert.ok(lease)
   await store.release('poll', lease)
   assert.deepEqual(await store.quota('visitor', 8), { allowed: false, retryAfter: 42 })
+  assert.deepEqual(await store.quotaAll([{ name: 'visitor:day', limit: 40, seconds: 86400 }, { name: 'site:day', limit: 500, seconds: 86400 }]), { allowed: false, retryAfter: 7200 })
+  assert.equal(commands.at(-1)[2], 2)
+  assert.deepEqual(commands.at(-1).slice(-4), [40, 86400, 500, 86400])
   assert.match(commands[0][1], /production/); assert.match(commands[2][1], /GET.*DEL/)
   assert.doesNotMatch(JSON.stringify(commands), /redis-private/)
+})
+
+const chatRequest = (ip = '192.0.2.4', body = { messages: [{ role: 'user', content: 'Tell me about Beacon' }] }, headers = {}) => new Request('https://desk.example/api/tifa', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-vercel-forwarded-for': ip, ...headers }, body: JSON.stringify(body) })
+const chatFetcher = () => json({ choices: [{ message: { content: JSON.stringify({ kind: 'handoff', reply: 'Ask Dipa directly.', sourceIds: [] }) } }] })
+test('a shared daily IP budget survives new functions and blocks before any Groq call', async () => {
+  const store = memoryStore(); let calls = 0
+  const options = { store, fetcher: () => { calls++; return chatFetcher() } }
+  const configured = { ...env, TIFA_DAILY_VISITOR_LIMIT: '2' }
+  for (let n = 0; n < 2; n++) assert.equal((await createTifaHandler(configured, [], [], options)(chatRequest())).status, 200)
+  const blocked = await createTifaHandler(configured, [], [], options)(chatRequest())
+  assert.equal(blocked.status, 429); assert.equal(blocked.headers.get('Retry-After'), '86400'); assert.equal(calls, 2)
+  // A denied visitor must not consume the independent site-wide budget.
+  assert.equal(store.counts.get('tifa:provider:day'), 2)
+  assert.equal((await createTifaHandler(configured, [], [], options)(chatRequest('192.0.2.5'))).status, 200)
+})
+test('site-wide budgets cannot be bypassed by changing IP, omitting Origin or creating new functions', async () => {
+  for (const setting of ['TIFA_GLOBAL_MINUTE_LIMIT', 'TIFA_GLOBAL_DAILY_LIMIT']) {
+    const store = memoryStore(); let calls = 0
+    const options = { store, fetcher: () => { calls++; return chatFetcher() } }
+    const configured = { ...env, [setting]: '2' }
+    const results = await Promise.all(Array.from({ length: 6 }, (_, n) => createTifaHandler(configured, [], [], options)(chatRequest(`192.0.2.${n+1}`))))
+    assert.equal(results.filter(response => response.status === 200).length, 2)
+    assert.equal(results.filter(response => response.status === 429).length, 4)
+    assert.equal(calls, 2)
+    assert.equal(store.counts.get('tifa:provider:day'), 2)
+  }
+})
+test('invalid requests and stored profile replies do not spend the Groq budget', async () => {
+  const store = memoryStore(); let admissions = 0
+  store.quotaAll = async () => { admissions++; throw Error('must not admit') }
+  const handler = createTifaHandler(env, [{ id: 'tifa', answer: 'Tifa is Dipa’s virtual guide.', sources: [], terms: [] }], [], { store, fetcher: () => { throw Error('must not call Groq') } })
+  assert.equal((await handler(chatRequest(undefined, { messages: [] }))).status, 400)
+  assert.equal((await handler(chatRequest(undefined, undefined, { 'Content-Type': 'application/json-bogus' }))).status, 415)
+  assert.equal((await handler(chatRequest(undefined, undefined, { Origin: 'https://desk.example', 'Sec-Fetch-Site': 'cross-site' }))).status, 403)
+  const reply = await handler(chatRequest(undefined, { profileReplies: true, messages: [{ role: 'user', content: 'Who are you?' }] }))
+  assert.equal(reply.status, 200); assert.equal((await reply.json()).source, 'profile'); assert.equal(admissions, 0)
+})
+test('shared-budget storage failures fail closed with a safe response, not an unhandled rejection', async () => {
+  const store = memoryStore(); let calls = 0
+  store.quotaAll = async () => { throw Error('private storage diagnostic') }
+  const handler = createTifaHandler(env, [], [], { store, fetcher: () => { calls++; return chatFetcher() } })
+  const response = await handler(chatRequest())
+  assert.equal(response.status, 503); assert.deepEqual(await response.json(), { error: 'provider_unavailable' }); assert.equal(calls, 0)
 })

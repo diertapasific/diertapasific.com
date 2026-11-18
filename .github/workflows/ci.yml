@@ -1,6 +1,7 @@
 name: Portfolio checks
 
 on:
+  workflow_dispatch:
   push:
     branches: [main]
   pull_request:
@@ -23,6 +24,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm audit --audit-level=moderate
       - run: node --test scripts/*.test.mjs
       - run: npm run build:vercel
       - run: npm run build:worker

@@ -8,6 +8,7 @@ export const MAX_BODY_BYTES = 16000
 
 export function validateMessages(body) {
   if (!body || !Array.isArray(body.messages) || !body.messages.length || body.messages.length > 12) return null
+  if (body.messages[0]?.role !== 'user') return null
   const messages = []
   for (const message of body.messages) {
     if (!message || !['user', 'assistant'].includes(message.role) || typeof message.content !== 'string') return null
@@ -65,16 +66,16 @@ const replySchema = { type: 'object', additionalProperties: false, required: ['k
   reply: { type: 'string' }, sourceIds: { type: 'array', items: { type: 'string' } },
 } }
 
-export async function handleTifa(request, env, notes, fetcher = fetch, articles = []) {
+export async function handleTifa(request, env, notes, fetcher = fetch, articles = [], beforeProvider) {
   const origin = request.headers.get('Origin') || ''
   const allowed = (env.ALLOWED_ORIGIN || 'https://www.diertapasific.com').split(',').map(value => value.trim()).filter(Boolean)
   const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' }
   const respond = (data, status = 200) => new Response(JSON.stringify(data), { status, headers })
-  if (origin && !allowed.includes(origin)) return respond({ error: 'origin_denied' }, 403)
+  if (request.headers.get('Sec-Fetch-Site') === 'cross-site' || origin && !allowed.includes(origin)) return respond({ error: 'origin_denied' }, 403)
   if (origin) headers['Access-Control-Allow-Origin'] = origin
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers })
   if (request.method !== 'POST') return respond({ error: 'method_not_allowed' }, 405)
-  if (!request.headers.get('Content-Type')?.includes('application/json')) return respond({ error: 'invalid_request' }, 415)
+  if (request.headers.get('Content-Type')?.split(';', 1)[0].trim().toLowerCase() !== 'application/json') return respond({ error: 'invalid_request' }, 415)
   if (Number(request.headers.get('Content-Length')) > MAX_BODY_BYTES) return respond({ error: 'request_too_large' }, 413)
   let body
   try {
@@ -97,6 +98,13 @@ export async function handleTifa(request, env, notes, fetcher = fetch, articles 
   const known = body.profileReplies === true ? profileReply(messages, notes) : null
   if (known) return respond({ reply: known.text, source: 'profile', profileVersion: PROFILE_VERSION, answer: known })
   if (!env.GROQ_API_KEY) return respond({ error: 'setup_required' }, 503)
+  if (beforeProvider) {
+    const allowance = await beforeProvider()
+    if (!allowance.allowed) {
+      headers['Retry-After'] = String(allowance.retryAfter)
+      return respond({ error: 'rate_limited', retryAfter: allowance.retryAfter }, 429)
+    }
+  }
   const context = selectTifaContext(messages, notes, articles)
   const result = await requestTifaProvider({ env, system: systemPrompt(context.notes, context.articles, context.focus), messages: compactTifaHistory(messages), schema: replySchema,
     parse: value => publicAnswer(value, context.notes, messages), signal: request.signal, fetcher })

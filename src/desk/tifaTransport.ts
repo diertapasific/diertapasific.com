@@ -11,7 +11,7 @@ export async function requestTifa(endpoint: string, messages: ChatTurn[], signal
   const data = await response.json().catch(() => null)
   if (!response.ok) {
     const seconds = Number(data?.retryAfter || response.headers.get('Retry-After'))
-    throw new TifaServiceError(typeof data?.error === 'string' ? data.error : data?.error?.code === 'model_not_found' ? 'model_unavailable' : 'provider_unavailable', Number.isFinite(seconds) && seconds > 0 ? Math.min(3600, seconds) : undefined)
+    throw new TifaServiceError(typeof data?.error === 'string' ? data.error : data?.error?.code === 'model_not_found' ? 'model_unavailable' : 'provider_unavailable', Number.isFinite(seconds) && seconds > 0 ? Math.min(86400, Math.ceil(seconds)) : undefined)
   }
   if (!['groq', 'profile'].includes(data?.source) || data?.profileVersion !== 2 || typeof data?.reply !== 'string' || !data.reply.trim() || data.reply.length > 2000 || !data.answer || !Array.isArray(data.answer.sources) || !Array.isArray(data.answer.followups)) throw new TifaServiceError('invalid_response')
   const destinations = new Set(['about', 'projects', 'reading', 'music', 'writing', 'contact'])
@@ -20,7 +20,7 @@ export async function requestTifa(endpoint: string, messages: ChatTurn[], signal
 }
 
 export function tifaUnavailableMessage(code: string) {
-  if (code === 'rate_limited') return 'AI usage limit reached · showing saved profile notes. Try again shortly.'
+  if (code === 'rate_limited') return 'AI usage limit reached · showing saved profile notes. Please try again later.'
   if (code === 'timeout') return 'AI took too long · showing saved profile notes.'
   if (code === 'invalid_response') return 'AI reply couldn’t be read · showing saved profile notes.'
   if (code === 'connection_interrupted') return 'AI connection was interrupted · showing saved profile notes.'
