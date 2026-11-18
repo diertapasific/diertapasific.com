@@ -6,7 +6,7 @@ import { Html } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
 import { Group, Vector3 } from 'three'
 import type { Point } from './model'
-import { surfacePresentation } from './surfaceProjection'
+import { createSurfaceTracker, surfaceHasSettled, surfacePresentation } from './surfaceProjection'
 
 const origin = () => [0, 0]
 const surfaceStyle = { transformOrigin: '0 0', visibility: 'hidden' as const }
@@ -20,6 +20,7 @@ export function ProjectedSurface({ children, position, rotation, worldSize, pixe
   const portal = useMemo(() => nativeColors ? { current: document.body } : undefined, [nativeColors])
   const anchor = useRef<Group>(null)
   const element = useRef<HTMLDivElement | null>(null)
+  const tracker = useRef(createSurfaceTracker())
   const { camera, size } = useThree()
   const points = useMemo(() => [new Vector3(), new Vector3(), new Vector3()], [])
   const project = useCallback(() => {
@@ -37,7 +38,8 @@ export function ProjectedSurface({ children, position, rotation, worldSize, pixe
     }
     const a = (topRight.x - topLeft.x) / pixelWidth, b = (topRight.y - topLeft.y) / pixelWidth
     const c = (bottomLeft.x - topLeft.x) / pixelHeight, d = (bottomLeft.y - topLeft.y) / pixelHeight
-    const presentation = surfacePresentation({ a, b, c, d, x: topLeft.x, y: topLeft.y, width: pixelWidth, height: pixelHeight }, nativeLayout)
+    const settled = surfaceHasSettled(tracker.current, topLeft.x, topLeft.y)
+    const presentation = surfacePresentation({ a, b, c, d, x: topLeft.x, y: topLeft.y, width: pixelWidth, height: pixelHeight }, nativeLayout && settled)
     const node = element.current
     for (const property of ['transform', 'left', 'top'] as const) if (node.style[property] !== presentation[property]) node.style[property] = presentation[property]
     const visibility = a * d - b * c > 0 && Math.abs(topLeft.z) <= 1 ? 'visible' : 'hidden'

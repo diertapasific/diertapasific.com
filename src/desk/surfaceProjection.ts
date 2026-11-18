@@ -12,3 +12,12 @@ export function surfacePresentation({ a, b, c, d, x, y, width, height }: Surface
     transform: native && nativeLayout ? 'none' : `matrix(${a},${b},${c},${d},${x},${y})`,
   }
 }
+
+// Keep travelling surfaces on transforms. A landed reader only uses ordinary
+// positioning once its screen position has stopped changing for two frames.
+export const createSurfaceTracker = () => ({ x: NaN, y: NaN, frames: 0 })
+export function surfaceHasSettled(state: ReturnType<typeof createSurfaceTracker>, x: number, y: number) {
+  state.frames = state.x === x && state.y === y ? Math.min(2, state.frames + 1) : 0
+  state.x = x; state.y = y
+  return state.frames === 2
+}
