@@ -1,11 +1,11 @@
 'use client'
 
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { MutableRefObject, RefObject } from 'react'
+import { Component, lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { MutableRefObject, ReactNode, RefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { ArrowUpRight } from '@phosphor-icons/react'
 import * as THREE from 'three'
-import { POSTS } from '../pages/Blog'
+import { POSTS } from '../data/posts'
 import { Block } from './geometry'
 import { ProjectedSurface } from './ProjectedSurface'
 import { focusView } from './model'
@@ -13,19 +13,29 @@ import { motionProgress, paperPosition } from './motion'
 import type { DeskMotion } from './motion'
 import { advancePaperDeck, articleDisplayHeight, articleStackPose, articleTurnPose, createPaperDeck } from './articleMotion'
 import type { PaperDeck } from './articleMotion'
-import { paperTexture } from './paperTexture'
+import { loadPaperArticle } from './loadPaperArticle'
 
-const PaperArticleBody = lazy(() => import('./PaperArticleBody'))
+const PaperArticleBody = lazy(loadPaperArticle)
 
 function ArticleBodyLoading() {
   return <div role="status" aria-label="Loading article" className="mt-6 min-h-48 space-y-4">{[0, 1, 2, 3, 4].map(line => <div key={line} className={`h-3 animate-pulse bg-zinc-200 ${line === 4 ? 'w-2/3' : 'w-full'}`} />)}</div>
 }
 
-function ArticleFace({ index }: { index: number }) {
+class ArticleReaderBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+  state = { failed: false }
+  static getDerivedStateFromError() { return { failed: true } }
+  render() {
+    return this.state.failed ? <div role="alert" className="mt-6 border-y border-zinc-300 py-4 text-sm leading-relaxed"><p>The article couldn't load.</p><button type="button" onClick={() => window.location.reload()} className="mt-2 min-h-11 underline underline-offset-4 active:scale-[.98]">reload article</button><p className="mt-2 text-xs text-zinc-500">You can also read the original on Medium below.</p></div> : this.props.children
+  }
+}
+
+const ArticleFace = memo(function ArticleFace({ index }: { index: number }) {
   const texture = useMemo(() => {
     const post = POSTS[index], canvas = document.createElement('canvas')
-    canvas.width = 1200; canvas.height = 1644
+    // Only the desk thumbnail uses a texture; focused articles remain live text.
+    canvas.width = 600; canvas.height = 822
     const c = canvas.getContext('2d')!
+    c.scale(.5, .5)
     c.fillStyle = '#f8f8f8'; c.fillRect(0, 0, 1200, 1644); c.fillStyle = '#424242'
     c.font = '26px monospace'; c.fillText(`WRITING / ${String(index + 1).padStart(2, '0')}`, 90, 120); c.fillText(post.date.toUpperCase(), 90, 225)
     const wrapped = (text: string, y: number, size: number, leading: number) => {
@@ -45,40 +55,31 @@ function ArticleFace({ index }: { index: number }) {
   }, [index])
   useEffect(() => () => texture.dispose(), [texture])
   return <mesh position={[0, .011, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[1.15, 1.6]} /><meshBasicMaterial map={texture} /></mesh>
-}
+})
 
-function ArticleSurface({ index, onSelect, elementRef, capture, hidden = false }: { index: number; onSelect: (index: number) => void; elementRef?: RefObject<HTMLDivElement>; capture?: (element: HTMLDivElement) => boolean; hidden?: boolean }) {
+function ArticleSurface({ index, onSelect, elementRef, interactive }: { index: number; onSelect: (index: number) => void; elementRef: RefObject<HTMLDivElement>; interactive: boolean }) {
   const { size } = useThree(), heading = useRef<HTMLHeadingElement>(null), sheetNav = useRef<HTMLElement>(null)
-  const local = useRef<HTMLDivElement>(null), root = elementRef || local
   const { zoom } = focusView('writing', size.width, size.height)
   const width = Math.round(1.15 * zoom), height = Math.round(1.6 * zoom), post = POSTS[index]
-  useEffect(() => { if (!capture && !hidden) heading.current?.focus({ preventScroll: true }) }, [index, capture, hidden])
   useEffect(() => {
-    if (!sheetNav.current) return
-    const nav = sheetNav.current, selected = nav.querySelector<HTMLElement>('[aria-pressed="true"]')
-    if (selected) nav.scrollLeft = selected.offsetLeft - nav.offsetLeft - (nav.clientWidth - selected.offsetWidth) / 2
+    if (elementRef.current) elementRef.current.inert = !interactive
+    if (interactive) heading.current?.focus({ preventScroll: true })
+  }, [interactive, elementRef])
+  useEffect(() => {
+    const nav = sheetNav.current, selected = nav?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    if (nav && selected) nav.scrollLeft = selected.offsetLeft - nav.offsetLeft - (nav.clientWidth - selected.offsetWidth) / 2
   }, [index, width])
-  useEffect(() => {
-    if (!capture) return
-    let frame = 0
-    const ready = () => {
-      if (root.current?.parentElement?.dataset.renderMode === 'native' && root.current.querySelector('[data-article-ready]') && capture(root.current)) return
-      frame = requestAnimationFrame(ready)
-    }
-    frame = requestAnimationFrame(ready)
-    return () => cancelAnimationFrame(frame)
-  }, [capture, root])
-  return <ProjectedSurface position={[0, .015, 0]} rotation={[-Math.PI / 2, 0, 0]} worldSize={[1.15, 1.6]} pixelWidth={width} pixelHeight={height}>
-    <div ref={root} data-object-surface={capture ? undefined : 'writing'} data-article-index={index} aria-hidden={capture || hidden ? true : undefined} aria-busy={hidden || undefined} className="flex flex-col overflow-hidden bg-[#f8f8f8] font-sans text-[#2a2a2a]" style={{ width, height, touchAction: 'auto', visibility: capture || hidden ? 'hidden' : undefined, pointerEvents: capture || hidden ? 'none' : 'auto' }} onKeyDown={event => {
-      if (hidden || capture) return
+  return <ProjectedSurface position={[0, .015, 0]} rotation={[-Math.PI / 2, 0, 0]} worldSize={[1.15, 1.6]} pixelWidth={width} pixelHeight={height} layer={interactive ? 8 : 9} interactive={interactive}>
+    <div ref={elementRef} data-object-surface={interactive ? 'writing' : undefined} data-article-index={index} aria-hidden={!interactive || undefined} className="flex flex-col overflow-hidden bg-[#f8f8f8] font-sans text-[#2a2a2a]" style={{ width, height, touchAction: 'auto', pointerEvents: interactive ? 'auto' : 'none' }} onKeyDown={event => {
+      if (!interactive) return
       const step = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0
       if (step && POSTS[index + step] && !event.metaKey && !event.ctrlKey && !event.altKey) { event.preventDefault(); onSelect(index + step) }
     }}>
       <header className="flex shrink-0 items-center justify-between border-b border-zinc-300 px-5 py-3 font-mono text-[9px] text-zinc-500"><span>NOTES FROM BUILDING</span><span>{String(index + 1).padStart(2, '0')} / {String(POSTS.length).padStart(2, '0')}</span></header>
-      <article key={index} aria-label={post.title} className="surface-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-6">
+      <article aria-label={post.title} className="surface-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-6">
         <p className="eyebrow">{post.date}</p>
         <h2 ref={heading} tabIndex={-1} className="mt-5 text-[27px] leading-[1.15] tracking-[-.035em] outline-none">{post.title}</h2>
-        <Suspense fallback={<ArticleBodyLoading />}><PaperArticleBody url={post.href} title={post.title} preview={post.preview} /></Suspense>
+        <ArticleReaderBoundary><Suspense fallback={<ArticleBodyLoading />}><PaperArticleBody url={post.href} title={post.title} preview={post.preview} /></Suspense></ArticleReaderBoundary>
         <a href={post.href} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-11 items-center gap-2 text-[12px] text-zinc-500 underline decoration-zinc-400 underline-offset-4 active:scale-[.98]">original on Medium<ArrowUpRight size={14} /></a>
         <p className="mt-7 border-t border-zinc-200 pt-4 font-mono text-[9px] text-zinc-400">DIERTA PASIFIC / MEDIUM</p>
       </article>
@@ -87,73 +88,41 @@ function ArticleSurface({ index, onSelect, elementRef, capture, hidden = false }
   </ProjectedSurface>
 }
 
-function ShufflingSheet({ texture, deck }: { texture: THREE.Texture; deck: MutableRefObject<PaperDeck> }) {
-  const paper = useMemo(() => {
-    const geometry = new THREE.PlaneGeometry(1.2, 1.65, 24, 12)
-    const source = geometry.attributes.position.array.slice()
-    const edge = new THREE.BufferGeometry().setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(74 * 3), 3))
-    const indices = [...Array.from({ length: 25 }, (_, i) => i), ...Array.from({ length: 12 }, (_, i) => (i + 1) * 25 + 24), ...Array.from({ length: 24 }, (_, i) => 12 * 25 + 23 - i), ...Array.from({ length: 12 }, (_, i) => (11 - i) * 25), 0]
-    return { geometry, source, edge, indices }
-  }, [])
-  useEffect(() => () => { paper.geometry.dispose(); paper.edge.dispose() }, [paper])
+const ArticleSheet = memo(function ArticleSheet({ index, outgoing, active, turning, deck, motion, onSelect }: { index: number; outgoing: boolean; active: boolean; turning: boolean; deck: MutableRefObject<PaperDeck>; motion: MutableRefObject<DeskMotion>; onSelect: (index: number) => void }) {
+  const sheet = useRef<THREE.Group>(null), page = useRef<HTMLDivElement>(null)
   useFrame(() => {
-    const bend = articleTurnPose(deck.current.progress).bend, positions = paper.geometry.attributes.position
-    for (let i = 0; i < positions.count; i++) {
-      const x = paper.source[i * 3], z = -paper.source[i * 3 + 1]
-      positions.setXYZ(i, x, .008 + bend * ((x + .6) / 1.2) ** 2, z)
-    }
-    positions.needsUpdate = true; paper.geometry.computeBoundingSphere()
-    const edge = paper.edge.attributes.position
-    paper.indices.forEach((i, n) => edge.setXYZ(n, positions.getX(i), positions.getY(i), positions.getZ(i)))
-    edge.needsUpdate = true; paper.edge.computeBoundingSphere()
-  })
-  return <><mesh geometry={paper.geometry}><meshBasicMaterial map={texture} side={THREE.DoubleSide} /></mesh><lineLoop geometry={paper.edge}><lineBasicMaterial color="#999999" /></lineLoop></>
-}
-
-type Swap = { from: THREE.Texture; to: THREE.Texture }
+    const pose = articleTurnPose(deck.current.progress)
+    if (sheet.current) sheet.current.position.set(outgoing ? pose.x : 0, outgoing ? pose.height : turning ? pose.incomingHeight : articleDisplayHeight(motionProgress(motion.current, 'writing')), 0)
+    // Hide the outgoing text before its physical sheet returns under the stack.
+    if (page.current) page.current.style.visibility = outgoing && deck.current.progress >= .48 ? 'hidden' : 'visible'
+  }, -.5)
+  return <group ref={sheet} position={[0, .2325, 0]}>
+    <Block size={[1.2, .014, 1.65]} ink="#999999" color="#f8f8f8" />
+    {active ? <ArticleSurface index={index} onSelect={onSelect} elementRef={page} interactive={!outgoing} /> : <ArticleFace index={index} />}
+  </group>
+})
 
 export function ArticlePapers({ active, motion, reducedMotion }: { active: boolean; motion: MutableRefObject<DeskMotion>; reducedMotion: boolean }) {
-  const deck = useRef(createPaperDeck()), displayed = useRef<THREE.Group>(null), outgoing = useRef<THREE.Group>(null), page = useRef<HTMLDivElement>(null)
+  const deck = useRef(createPaperDeck())
   const [presentation, setPresentation] = useState({ index: 0, from: null as number | null })
   const previous = useRef(presentation)
-  const [pending, setPending] = useState<number | null>(null), [swap, setSwap] = useState<Swap | null>(null)
-  useEffect(() => () => { swap?.from.dispose(); swap?.to.dispose() }, [swap])
-  useEffect(() => { if (!active || presentation.from === null) setSwap(null); if (!active) setPending(null) }, [active, presentation.from])
   useFrame((_, delta) => {
-    if (!active) { deck.current.from = null; deck.current.progress = 1 }
+    if (!active) { deck.current.from = null; deck.current.progress = 1; deck.current.requested = deck.current.index }
     else advancePaperDeck(deck.current, delta, reducedMotion)
-    const open = motionProgress(motion.current, 'writing'), turning = deck.current.from !== null
-    const pose = articleTurnPose(deck.current.progress)
-    if (displayed.current) displayed.current.position.y = turning ? pose.incomingHeight : articleDisplayHeight(open)
-    if (outgoing.current) outgoing.current.position.set(pose.x, pose.height, 0)
     const next = { index: deck.current.index, from: deck.current.from }
     if (next.index !== previous.current.index || next.from !== previous.current.from) { previous.current = next; setPresentation(next) }
-  })
-  const select = (index: number) => {
-    if (index === deck.current.index || pending !== null || swap || !POSTS[index]) return
-    if (reducedMotion) deck.current.requested = index
-    else setPending(index)
-  }
-  const capture = useCallback((target: HTMLDivElement) => {
-    if (!page.current?.querySelector('[data-article-ready]') || pending === null) return false
-    const dimensions = { width: 1.2, height: 1.65, contentWidth: 1.15, contentHeight: 1.6, offsetX: 0 }
-    setSwap({ from: paperTexture(page.current, dimensions), to: paperTexture(target, dimensions) })
-    deck.current.requested = pending; setPending(null)
-    return true
-  }, [pending])
-  const turning = presentation.from !== null && swap !== null
+  }, -.75)
+  const select = useCallback((index: number) => {
+    if (POSTS[index]) deck.current.requested = index
+  }, [])
+  const from = active ? presentation.from : null, turning = from !== null
   return <group position={paperPosition}>
     {Array.from({ length: turning ? 4 : 5 }, (_, rank) => {
       const pose = articleStackPose(rank)
       return <group key={rank} position={[0, pose.height, 0]} rotation={[0, pose.yaw, 0]}><Block size={[1.2, .014, 1.65]} ink="#a4a4a4" color="#f8f8f8" /></group>
     })}
-    <group ref={displayed} position={[0, .2325, 0]}>
-      <Block size={[1.2, .014, 1.65]} ink="#999999" color="#f8f8f8" />
-      {turning ? <mesh position={[0, .011, 0]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[1.2, 1.65]} /><meshBasicMaterial map={swap.to} /></mesh> : <ArticleFace index={presentation.index} />}
-      {active && <ArticleSurface index={presentation.index} onSelect={select} elementRef={page} hidden={turning} />}
-      {active && pending !== null && <ArticleSurface index={pending} onSelect={select} capture={capture} />}
-    </group>
-    {turning && <group ref={outgoing}><ShufflingSheet texture={swap.from} deck={deck} /></group>}
+    {/* Stable article keys keep the outgoing DOM and scroll position alive. */}
+    {(from === null ? [presentation.index] : [from, presentation.index]).map(index => <ArticleSheet key={index} index={index} outgoing={index === from} active={active} turning={turning} deck={deck} motion={motion} onSelect={select} />)}
     <group position={[.75, .14, -.05]} rotation={[Math.PI / 2, 0, -.12]}><mesh><cylinderGeometry args={[.022, .022, .92, 12]} /><meshBasicMaterial color="#aaa" /></mesh><Block size={[.025, .15, .025]} position={[.025, .28, 0]} /></group>
   </group>
 }

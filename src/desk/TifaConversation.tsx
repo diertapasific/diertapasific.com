@@ -39,7 +39,7 @@ export function TifaConversation({ open, chat, surface, onSource, fallback = fal
   },[open,chat.messages,chat.replying,started])
   const send=(value:string)=>{if(!value.trim()||chat.replying)return;void chat.send(value);setDraft('')}
   const submit=(event:FormEvent)=>{event.preventDefault();send(draft)}
-  const keepSuggestionsVisible=layout.chat.height>=300
+  const keepSuggestionsVisible=!compact&&layout.chat.height>=300
   const followupQuestions=latest&&!chat.replying&&latest.followups.length>0?<nav aria-label="Suggested questions" className="grid shrink-0 grid-cols-2 gap-2 px-2 pt-2">
       {latest.followups.slice(0,2).map(question=><button type="button" key={question} onClick={()=>send(question)} className="flex min-h-11 min-w-0 items-center justify-between gap-2 border border-zinc-300 bg-[#f6f6f6] px-2.5 py-2 text-left text-[11px] leading-[1.45] text-zinc-600 active:scale-[.98]"><span className="min-w-0 break-words">{question}</span><ArrowUpRight size={12} aria-hidden="true" className="shrink-0" /></button>)}
     </nav>:null
@@ -52,7 +52,7 @@ export function TifaConversation({ open, chat, surface, onSource, fallback = fal
       {!started?<div className="space-y-3">
         <div className="tifa-bubble"><p className={`${compact?'text-[14px]':'text-[17px]'} leading-[1.65]`}>Hi, I’m Tifa.<br />What would you like to know about Dipa?</p></div>
         <div className="flex flex-wrap gap-2 pl-1">{prompts.map(([label,question])=><button type="button" key={label} onClick={()=>send(question)} aria-label={question} className="min-h-11 border border-zinc-300 bg-[#f6f6f6] px-3 py-1.5 font-mono text-[10px] text-zinc-600 active:scale-[.98]">{label}<ArrowUpRight size={12} className="ml-2 inline" /></button>)}</div>
-      </div>:<div className="space-y-4">{chat.messages.map(message=><article key={message.id} data-tifa-message={message.role} className={message.role==='user'?'ml-auto max-w-[90%]':'max-w-[96%]'}>
+      </div>:<div className="space-y-4">{chat.messages.map(message=><article key={message.id} data-tifa-message={message.role} className={message.role==='user'?'ml-auto max-w-[90%]':compact?'max-w-full':'max-w-[96%]'}>
         <p className={`mb-1 px-2 font-mono text-[9px] text-zinc-500 ${message.role==='user'?'text-right':''}`}>{message.role==='user'?'you':message.source==='notes'?'Tifa · profile notes':'Tifa'}</p>
         <div className={message.role==='tifa'?'tifa-bubble':'tifa-user-bubble'}><p className={`whitespace-pre-wrap break-words ${compact?'text-[13px]':'text-[14px]'} leading-[1.65]`}>{message.text}</p>
           {message.answer&&message.answer.sources.length>0&&<div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">{message.answer.sources.map((source,i)=><button type="button" key={`${source.label}-${i}`} onClick={()=>onSource(source)} className="inline-flex min-h-11 items-center gap-1 text-[11px] text-zinc-500 underline decoration-zinc-300 underline-offset-4 active:scale-[.98]">{source.label}<ArrowUpRight size={12} /></button>)}</div>}

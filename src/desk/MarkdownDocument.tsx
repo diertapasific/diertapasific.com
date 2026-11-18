@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef } from 'react'
+import { memo, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
@@ -8,7 +8,7 @@ export function withoutEmoji(text: string) {
   return text.replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, '').replace(/(\*\*|__)([^\n]+?)\1/g, (_, marker: string, content: string) => `${marker}${content.trim()}${marker}`)
 }
 
-export function MarkdownDocument({ markdown }: { markdown: string }) {
+export const MarkdownDocument = memo(function MarkdownDocument({ markdown }: { markdown: string }) {
   const root = useRef<HTMLDivElement>(null)
   return <div ref={root} className="monitor-document">
     <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={{
@@ -25,4 +25,4 @@ export function MarkdownDocument({ markdown }: { markdown: string }) {
       table: ({ children }) => <div className="overflow-x-auto"><table>{children}</table></div>,
     }}>{withoutEmoji(markdown)}</ReactMarkdown>
   </div>
-}
+})

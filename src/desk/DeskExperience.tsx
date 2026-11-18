@@ -7,12 +7,12 @@ import Content from './Content'
 import { destinations, readLocation } from './model'
 import type { Destination, AboutSection } from './model'
 import './desk.css'
-import { BlueprintThemeFilter } from './BlueprintThemeFilter'
 import { initialOpeningMode, openingSessionKey } from './opening'
 import type { OpeningMode } from './opening'
 import { useTifaChat } from './useTifaChat'
 import { TifaConversation } from './TifaConversation'
 import { DeskNavigation } from './DeskNavigation'
+import { loadPaperArticle } from './loadPaperArticle'
 import type { TifaSource } from './tifaAnswers'
 
 const DeskScene = lazy(() => import('./DeskScene'))
@@ -78,6 +78,7 @@ export default function DeskExperience() {
 
   const navigate = useCallback((destination: Destination | null, about: AboutSection = 'intro') => {
     if (opening) return
+    if (destination === 'writing') void loadPaperArticle().catch(() => {})
     if (destination) returnFocus.current = document.activeElement as HTMLElement
     const hash = destination ? `#${destination}${destination === 'about' && about !== 'intro' ? `/${about}` : ''}` : '#desk'
     window.history.pushState(null, '', hash)
@@ -156,7 +157,6 @@ export default function DeskExperience() {
   }, [ready, failed, onFailure, sceneKey])
 
   return <IconContext.Provider value={{ weight: 'light', size: 18 }}>
-    <BlueprintThemeFilter />
     <main data-theme={dark ? 'dark' : 'light'} data-opening={openingMode} aria-busy={opening || undefined} className={`desk-app relative min-h-[100dvh] w-full overflow-hidden bg-[#f6f6f6] text-[#2a2a2a] ${opening ? 'is-opening' : ''} ${focused ? 'has-selection' : ''} ${chatOpen?'has-chat':''} ${selected === 'about' || selected === 'reading' ? 'has-book' : ''} ${reducedMotion ? 'reduce-motion' : ''}`}>
       {!opening && <a href="#desk-index" className="skip-link">skip to navigation</a>}
       <header className="desk-header absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-5 md:px-10 md:py-7">

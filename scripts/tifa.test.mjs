@@ -154,3 +154,17 @@ test('the desk dimension guides and end caps stay clear of Tifa’s floor mat',(
   assert.ok(deskDimensionLines.widthZ-.16>matFront+.25,'width guide and ticks clear the front of the mat')
   assert.ok(deskDimensionLines.heightX>matRight+.3,'height guide is on the opposite side of the desk')
 })
+
+
+test('phone conversations reserve most of the viewport for reading replies',()=>{
+  for(const [width,height] of [[320,568],[375,667],[390,844],[430,932]]){
+    const {chat}=tifaLayout(width,height)
+    assert.ok(chat.height>=height*.6, `${width}x${height} chat should use at least sixty percent of the viewport`)
+    assert.ok(chat.top>=140, 'Tifa and the return control retain their own space')
+    assert.ok(chat.top+chat.height<=height-16, 'the composer clears the bottom edge')
+  }
+  for(const height of [320,430,530]){
+    const {chat}=tifaLayout(390,height)
+    assert.ok(chat.height>=190, 'short and keyboard layouts keep room for several reply lines')
+  }
+})
