@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:worker": "tsc -p worker/tsconfig.json && vite build --config worker/vite.config.ts"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.7",
