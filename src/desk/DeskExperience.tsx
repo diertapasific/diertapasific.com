@@ -31,8 +31,8 @@ class SceneBoundary extends Component<{ children: ReactNode; onError: () => void
   render() { return this.state.failed ? null : this.props.children }
 }
 
-function SceneSkeleton() {
-  return <div className="scene-loading pointer-events-none absolute inset-0 flex items-center justify-center" role="status"><div className="w-52"><div className="loading-monitor mx-auto h-24 w-36 border border-zinc-300" /><div className="mx-auto h-8 w-px bg-zinc-300" /><div className="h-px w-full bg-zinc-300" /><p className="mt-6 text-center font-mono text-[10px] uppercase tracking-widest text-zinc-500">drawing the desk</p></div></div>
+function SceneSkeleton({ ready }: { ready: boolean }) {
+  return <div className={`scene-loading pointer-events-none absolute inset-0 flex items-center justify-center ${ready ? 'is-ready' : ''}`} role={ready ? undefined : 'status'} aria-hidden={ready || undefined}><div className="w-52"><div className="loading-monitor mx-auto h-24 w-36 border border-zinc-300" /><div className="mx-auto h-8 w-px bg-zinc-300" /><div className="h-px w-full bg-zinc-300" /><p className="mt-6 text-center font-mono text-[10px] uppercase tracking-widest text-zinc-500">drawing the desk</p></div></div>
 }
 
 export default function DeskExperience() {
@@ -206,15 +206,15 @@ export default function DeskExperience() {
         </div>
       </header>
 
-      {!focused && <div className="desk-intro pointer-events-none absolute left-5 top-[112px] z-[4] md:left-10 md:top-[134px]">
+      <div aria-hidden={focused || undefined} className={`desk-intro ${focused ? 'is-away' : ''} pointer-events-none absolute left-5 top-[112px] z-[4] md:left-10 md:top-[134px]`}>
         <p className="eyebrow mb-4">a few things that make me, me.</p>
         <h1 className="text-[32px] font-normal leading-[1.08] tracking-[-.055em] md:text-[44px]">a work in progress.</h1>
         <p className="mt-4 text-sm leading-relaxed text-zinc-500">engineer. builder. curious human.<br /><span className="text-zinc-700">take a look around.</span></p>
-      </div>}
+      </div>
 
       <div ref={sceneSurface} data-reading-strategy={keepRenderer ? 'parked' : parkRequested ? 'fresh-fallback' : 'fresh'} data-reading-capture-ms={import.meta.env.DEV ? readingFrame?.captureMs.toFixed(1) : undefined} data-reading-scene={scenePaused ? 'paused' : readingFrame ? 'resuming' : 'live'} onClick={event => { if ((failed || scenePaused) && focused && event.target === event.currentTarget) onDismiss() }} className="scene-layer absolute inset-0" aria-label="Interactive 3D desk. Drag to look around or choose an object from the navigation.">
         {!failed && !isolatedWriting && (!scenePaused || keepRenderer) && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene browserVisible={browserVisible} keepRenderer={keepRenderer} readingPaused={scenePaused} onParkedLoss={onParkedLoss} readingFrame={readingFrame} onReadingFrame={onReadingFrame} nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={readingFrame && !keepRenderer ? false : chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={readingFrame && !keepRenderer ? 'writing' : selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
-        {!ready && !failed && !scenePaused && !readingFrame && <SceneSkeleton />}
+        {!failed && !scenePaused && !readingFrame && <SceneSkeleton ready={ready} />}
         {readingFrame && <NativeReadingBackdrop frame={readingFrame} surface={sceneSurface} />}
         {failed && !chatOpen && !writingOpen && <div className="absolute inset-x-6 top-[45%] mx-auto max-w-sm border-y border-zinc-300 py-7 text-center"><p className="text-lg">The desk couldn't be drawn.</p><p className="mt-3 text-sm leading-relaxed text-zinc-500">You can still explore every section using the navigation below.</p><button onClick={() => { setFailure(null); setReady(false); setSceneKey(v => v + 1) }} className="mt-4 min-h-11 font-mono text-xs underline underline-offset-4">try loading again</button></div>}
       </div>
