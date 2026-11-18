@@ -119,3 +119,12 @@ test('JSON media types are exact and browser fetch metadata cannot bypass origin
   const upperCase = request({ messages }); upperCase.headers.set('Content-Type', 'Application/JSON; charset=UTF-8')
   assert.equal((await handleTifa(upperCase, env, notes, fetcher)).status, 200)
 })
+
+test('daily retry timing reaches the browser without being shortened to one hour', async () => {
+  for (const [expected, response] of [
+    [86400, () => Response.json({ error: 'rate_limited', retryAfter: 86400 }, { status: 429 })],
+    [7215, () => Response.json({ error: 'rate_limited' }, { status: 429, headers: { 'Retry-After': '7215' } })],
+  ]) {
+    await assert.rejects(requestTifa('/api/tifa', messages, new AbortController().signal, async () => response()), error => error.code === 'rate_limited' && error.retryAfter === expected)
+  }
+})
