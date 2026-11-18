@@ -6,7 +6,7 @@ import { addAfterEffect, Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { destinations, deskHeight, focusView, overviewPose } from './model'
-import { advanceDeskMotion, bookPose, bookPoses, contentIsReady, createDeskMotion, motionProgress, deskControlPosition, deskDimensionLines, deskSize, deskmatPosition, monitorDepth, speakerPosition } from './motion'
+import { advanceDeskMotion, bookPose, bookPoses, contentIsReady, createDeskMotion, motionProgress, deskControlPosition, deskDimensionLines, deskSize, deskmatPosition, monitorDepth, workstationCenterX, speakerPosition } from './motion'
 import type { DeskMotion } from './motion'
 import type { AboutSection, Destination, Point } from './model'
 import { Block, Face, PAPER, Plate, Ring, Stroke } from './geometry'
@@ -73,7 +73,7 @@ function Target({ id, position, marker, labelOffset, children, selected, hovered
 }
 
 const MonitorArm = memo(function MonitorArm() {
-  return <group position={[.2, 0, 0]}>
+  return <group>
     <Block size={[.26, .14, .36]} position={[0, .06, -2.34]} color="#dedede" ink="#777777" />
     <Block size={[.12, 1.20, .12]} position={[0, .72, -2.27]} ink="#777777" />
     <Block size={[.14, .14, .76]} position={[0, 1.32, -1.96]} rotation={[-.12, 0, 0]} color="#e4e4e4" />
@@ -85,7 +85,7 @@ const MonitorArm = memo(function MonitorArm() {
 })
 
 const MonitorShelf = memo(function MonitorShelf() {
-  return <group position={[.2, 0, -.93]}>
+  return <group position={[0, 0, -.93]}>
     <Plate size={[4.4, 1.12, .08]} radius={.055} position={[0, .31, 0]} rotation={[-Math.PI / 2, 0, 0]} color="#efefef" ink="#777777" />
     {[-1.8, 1.8].map(x => <Block key={x} size={[.14, .19, .84]} position={[x, .175, 0]} ink="#999999" color="#dedede" />)}
   </group>
@@ -95,9 +95,9 @@ function Monitors(props: ObjectProps & { suppressClickUntil: MutableRefObject<nu
   const { size } = useThree()
   const mobile = size.width < 768, active = props.selected === 'projects' && props.contentReady
   const surface = { dark: props.dark, destination: 'projects' as const, aboutSection: props.aboutSection, onAboutSection: props.onAboutSection, reducedMotion: props.reducedMotion }
-  return <group position={[0, 0, monitorDepth + 1]}>
+  return <group position={[workstationCenterX, 0, monitorDepth + 1]}>
     <MonitorArm /><MonitorShelf /><ShelfObjects interactive={!props.selected && !props.chatOpen && props.openingMode === 'none'} suppressClickUntil={props.suppressClickUntil} />
-    <group position={[.2, 1.57, -1.0]}>
+    <group position={[0, 1.57, -1.0]}>
       <Plate size={[4.4, 1.92, .12]} radius={.055} ink={active ? '#353535' : '#626262'} />
       <Plate size={[4.22, 1.76, .015]} radius={.02} position={[0, .015, .069]} ink="#9a9a9a" />
       <Ring radius={.014} position={[1.96, -.9, .063]} color="#666666" />
@@ -171,7 +171,7 @@ function Desk(props: ObjectProps & Pick<SceneProps, 'standing'> & { annotationPl
         for (let c = 0; c < 4; c++) for (let i = 0; i <= 12; i++) { const a = -Math.PI / 2 + c * Math.PI / 2 + i / 12 * Math.PI / 2; const x = c < 2 ? w / 2 - r : -w / 2 + r, y = c === 0 || c === 3 ? -h / 2 + r : h / 2 - r; p.push([x + Math.cos(a) * r, y + Math.sin(a) * r, 0]) } p.push(p[0]); return p
       }, [])} color="#b9b9b9" dashed /></group>
       {mobile && !props.selected && !props.chatOpen && <MobileDeskLabels annotationPlan={props.annotationPlan} height={h} onSelect={props.onSelect} suppressClickUntil={props.suppressClickUntil} />}
-      <Target {...targetProps} id="projects" position={[0, 0, 0]} marker={[.35, 2.98, monitorDepth]}><Monitors {...props} suppressClickUntil={props.suppressClickUntil} /></Target>
+      <Target {...targetProps} id="projects" position={[0, 0, 0]} marker={[workstationCenterX, 2.98, monitorDepth]}><Monitors {...props} suppressClickUntil={props.suppressClickUntil} /></Target>
       <Keyboard /><Mouse />
       <Target {...targetProps} id="about" position={[0, 0, 0]} marker={[bookPoses.about.rest[0], .85, bookPoses.about.rest[2] + .2]}><Notebook {...props} id="about" /></Target>
       <Target {...targetProps} id="reading" position={[0, 0, 0]} marker={[bookPoses.reading.rest[0], 1.25, bookPoses.reading.rest[2]]}><Notebook {...props} id="reading" /></Target>

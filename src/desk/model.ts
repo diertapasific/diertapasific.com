@@ -1,4 +1,4 @@
-import { bookPoses, cardPoses, monitorDepth, paperPosition, speakerScreen, speakerPosition, speakerScale, speakerViewOffset } from './motion'
+import { bookPoses, cardPoses, monitorDepth, workstationCenterX, paperPosition, speakerScreen, speakerPosition, speakerScale, speakerViewOffset } from './motion'
 
 export const destinations = [
   { id: 'projects', number: '01', label: 'projects', object: 'the monitor', subtitle: 'Things I have built.' },
@@ -28,8 +28,8 @@ export function focusView(id: Destination, width: number, height: number) {
   const bookX = -.65
   const views: Record<Destination, { target: Point; offset: Point; width: number; height: number }> = {
     projects: mobile
-      ? { target: [.2, 1.57, monitorDepth + .01], offset: [0, 0, 9], width: 1.6, height: 2.02 }
-      : { target: [.2, 1.57, monitorDepth + .01], offset: [0, 0, 9], width: 4.55, height: 2.02 },
+      ? { target: [workstationCenterX, 1.57, monitorDepth + .01], offset: [0, 0, 9], width: 1.6, height: 2.02 }
+      : { target: [workstationCenterX, 1.57, monitorDepth + .01], offset: [0, 0, 9], width: 4.55, height: 2.02 },
     about: { target: [bookPoses.about.open[0] + bookX, bookPoses.about.open[1] + .11, bookPoses.about.open[2]], offset: [0, 9, .001], width: mobile ? 2.72 : 2.8, height: 1.77 },
     reading: { target: [bookPoses.reading.open[0] + bookX, bookPoses.reading.open[1] + .11, bookPoses.reading.open[2]], offset: [0, 9, .001], width: mobile ? 2.72 : 2.8, height: 1.77 },
     music: { target: [speakerPosition[0], speakerPosition[1] - .1 * speakerScale, speakerPosition[2] + speakerScreen[2] * speakerScale], offset: speakerViewOffset, width: 1.32, height: 1.22 },
