@@ -12,6 +12,7 @@ import type { OpeningMode } from './opening'
 import { useTifaChat } from './useTifaChat'
 import { TifaConversation } from './TifaConversation'
 import { DeskNavigation } from './DeskNavigation'
+import { DeskSound } from './DeskSound'
 import type { TifaSource } from './tifaAnswers'
 
 const DeskScene = lazy(() => import('./DeskScene'))
@@ -163,6 +164,7 @@ export default function DeskExperience() {
         <div className="flex items-center gap-3 md:gap-7">
           <span className="hidden font-mono text-[10px] uppercase tracking-[.15em] text-zinc-500 sm:block">a personal space</span>
           <button type="button" disabled={opening} onClick={onAsk} aria-label="Ask Tifa about Dipa" className="flex min-h-11 items-center gap-2 font-mono text-[10px] text-zinc-500 active:scale-[.98]"><ChatCircle size={16} /><span>ask Tifa</span></button>
+          <DeskSound disabled={opening} />
           <button disabled={opening} onClick={() => setDark(v => !v)} aria-label={`Switch to ${dark ? 'light' : 'dark'} mode`} title={`${dark ? 'Light' : 'Dark'} mode`} className="flex size-11 shrink-0 items-center justify-center active:scale-[.98]">{dark ? <Sun size={18} /> : <Moon size={18} />}</button>
         </div>
       </header>
