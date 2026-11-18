@@ -112,4 +112,3 @@ export const PROJECTS: Project[] = [
     ],
   },
 ]
-

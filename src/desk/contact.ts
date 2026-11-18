@@ -5,4 +5,3 @@ export const contact = {
   github: 'https://github.com/diertapasific',
   location: 'Jakarta, Indonesia',
 }
-

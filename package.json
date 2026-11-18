@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "build:worker": "tsc -p worker/tsconfig.json && vite build --config worker/vite.config.ts"
+    "build:worker": "tsc -p worker/tsconfig.json && vite build --config worker/vite.config.ts",
+    "check:api": "tsc -p tsconfig.api.json",
+    "build:vercel": "npm run check:api && npm run check:api:runtime && npm run build",
+    "check:api:runtime": "node scripts/check-api-runtime.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.7",

@@ -1,9 +1,57 @@
 # Dipa's desk
 
-Dierta Pasific's monochrome, interactive 3D portfolio. Explore projects, writing, experience, education, reading notes, music and a contact badge through guided object views. Tifa is the desk's Yorkie companion.
+Dierta Pasific's interactive portfolio, built with React 18, TypeScript, Vite 6, Three.js, React Three Fiber and Tailwind CSS 3. The current experience is the monochrome blueprint desk in `src/desk`; older page components are retained for their shared content.
 
-Built with React 18, TypeScript, Vite 6, Three.js and React Three Fiber.
+The desk includes projects and Medium readers, an About book with experience and education, reading notes, Spotify listening status, writing, a reversible contact badge, and Tifa, a profile-grounded Groq assistant. Tifa can use the full saved Medium text editions in `src/desk/data/medium-articles.json`. The active Yorkie is an original procedural model; the previous statue scan and CC BY attribution are retained under `public/assets/desk`.
 
-Run `npm install`, then `npm run dev`. Build with `npm run build`. Local and hosted backends are added separately.
+## Local development
 
-The local Vite server supplies `/api/tifa` and `/api/spotify/now-playing`. Set server-only `GROQ_API_KEY`, `GROQ_MODEL` and public `SPOTIFY_CLIENT_ID` in ignored `.env.local`. Spotify uses PKCE through `http://127.0.0.1:5173/api/spotify/connect`; register the matching `/api/spotify/callback` redirect. Tokens stay in ignored `.spotify/`. The retained Worker uses the same Tifa knowledge and full saved Medium articles; `npm run build:worker` builds it without publishing.
+```sh
+npm install
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+Put local credentials in ignored `.env.local`; use `.env.example` for variable names. Never prefix private credentials with `VITE_`. The local Vite middleware serves `/api/tifa` and `/api/spotify/now-playing`.
+
+For local Spotify authorization, register `http://127.0.0.1:5173/api/spotify/callback` in the Spotify Developer app, then open `http://127.0.0.1:5173/api/spotify/connect`. Only currently-playing and recently-played read scopes are requested, using PKCE. The private refresh token stays in ignored `.spotify/connection.json`. Do not upload that folder. Without a public proxy, the local server polls every 15 seconds and preserves the last observed track. After production is connected, set local `SPOTIFY_PUBLIC_STATUS_URL=https://diertapasific.vercel.app/api/spotify/now-playing` to reuse the cloud snapshot and stop independent local token refreshes. Leave that value empty when deliberately authorizing a separate local connection.
+
+## Vercel
+
+`vercel.json` builds the Vite frontend and two Node functions:
+
+- `POST /api/tifa`: bounded conversations, profile/article retrieval, Groq calls and a shared eight-request-per-minute visitor quota.
+- `GET /api/spotify/now-playing`: a sanitized public playback snapshot, shared five-second cache and distributed polling lease. Refresh tokens and last-observed tracks persist in Redis. Provider backoff also survives cold instances.
+
+A free Upstash Redis database provides durable token storage and shared quotas. Both `UPSTASH_REDIS_REST_*` and Vercel integration `KV_REST_API_*` names are supported. Keep the database and functions in the same region.
+
+Configure **Production** variables before redeploying:
+
+| Name | Vercel type | Purpose |
+| --- | --- | --- |
+| `GROQ_API_KEY` | Secret | Server-only Groq credential |
+| `SPOTIFY_REFRESH_TOKEN` | Secret | Initial PKCE connection token; subsequent rotations are saved in Redis |
+| `UPSTASH_REDIS_REST_TOKEN` or `KV_REST_API_TOKEN` | Secret | Redis write credential |
+| `SPOTIFY_CLIENT_ID` | Config | Public Spotify app ID |
+| `GROQ_MODEL` | Config | `openai/gpt-oss-20b` |
+| `UPSTASH_REDIS_REST_URL` or `KV_REST_API_URL` | Config | Redis REST endpoint |
+| `SITE_URL` | Config | Canonical production URL, including `https://` |
+
+Secrets are runtime-only; none belong in frontend variables, source archives or Git. Configure separate credentials and a separate Redis namespace for Preview environments before enabling their backend. There is no public production Spotify authorization route. Reconnect privately if Spotify revokes the account's refresh token.
+
+The deployed speaker updates through Vercel when visited, including while the laptop is off. When the site was idle, a newer Spotify history entry can replace an older observed song; older history cannot overwrite a newer observation. Spotify may delay history updates, so the UI distinguishes current playback, last seen and unavailable states. This is not a continuous listening archive.
+
+`SITE_URL` controls canonical/social metadata during the build. Update it and redeploy when adding a custom domain. `VERCEL_PROJECT_PRODUCTION_URL` is used as a fallback on Vercel. The original GitHub Pages URL is the local fallback.
+
+The Vercel project is connected to the personal GitHub repository. Pull requests create Preview deployments; merging into `main` deploys Production. The `Portfolio checks` workflow runs the regression suite, compiled Node handler check, frontend build and retained Worker build. Preview backends remain unconfigured until separate secrets/storage are explicitly added. Changing Vercel environment variables requires a redeployment. The `portfolio-v1` tag preserves the site before the desk redesign.
+
+## Validation and maintenance
+
+```sh
+node --test scripts/*.test.mjs
+npm run build:vercel
+npm run build:worker
+```
+
+Tests cover camera/focus transitions, companion motion, Tifa contracts and retrieval, Spotify OAuth/state handling, cloud token persistence, caching and quotas. Provider mocks validate behavior; a successful live response is separate proof of credential access.
+
+Refresh the saved public articles with `python3 scripts/sync-medium-articles.py`, then rebuild. Current profile notes override historical biography. VeganFuel has no Medium write-up. The legacy Cloudflare Worker remains under `worker/`; it is not the backend used by the Vercel build. Building it does not publish it. The legacy GitHub Pages workflow is manual-only so pushes no longer deploy a second copy with unavailable server endpoints.

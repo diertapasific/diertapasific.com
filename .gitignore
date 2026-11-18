@@ -9,3 +9,5 @@ dist/
 .spotify/
 dist-worker/
 .dev.vars*
+
+.vercel/

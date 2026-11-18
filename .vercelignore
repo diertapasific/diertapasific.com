@@ -1,0 +1,14 @@
+.git
+.env
+.env.*
+.spotify
+node_modules
+dist
+dist-worker
+.vercel
+worker
+*.zip
+*.log
+public/assets/models
+public/assets/data
+public/assets/img/diertapasific.jpg
