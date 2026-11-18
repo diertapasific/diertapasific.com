@@ -25,7 +25,7 @@ const SECTIONS: Section[] = [
         ],
       },
       {
-        title: 'AI Engineer',
+        title: 'AI Engineer Intern',
         org: 'Neuram.AI',
         period: 'Aug 2025 – Feb 2026',
         bullets: [
@@ -45,7 +45,7 @@ const SECTIONS: Section[] = [
         ],
       },
       {
-        title: 'Back End Developer',
+        title: 'Back End Developer Intern',
         org: 'Inovasi Daya Solusi',
         period: 'Feb 2024 – Feb 2025',
         bullets: [
