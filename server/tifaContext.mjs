@@ -1,3 +1,4 @@
+import { resolveTifaFocus } from './tifaConversation.mjs'
 export const MAX_ARTICLE_CHARS = 10000
 export const MAX_NOTE_CHARS = 6500
 const normalize = text => String(text).normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim()
@@ -22,10 +23,12 @@ export function selectTifaContext(messages, notes, articles = []) {
   const index = articleIndex(articles)
   const named = text => index.filter(article => article.terms.some(term => contains(normalize(text), term)))
   const ranked = notes.map((note, order) => ({ note, order, score: (note.terms || []).reduce((score, term) => score + (contains(q, term) ? normalize(term).split(' ').length * 3 + (/^(project|book):/.test(note.id) ? 20 : 0) : 0), 0) })).sort((a, b) => b.score - a.score || a.order - b.order)
+  const focus = resolveTifaFocus(messages, notes), focusedNote = notes.find(note => note.id === focus)
   let relevant = named(question)
+  if (!relevant.length && focus?.startsWith('project:')) relevant = index.filter(article => `project:${article.id}` === focus)
   const explicitProject = ranked.find(({ note, score }) => score > 0 && note.id.startsWith('project:'))
   const missingArticle = explicitProject && !index.some(article => `project:${article.id}` === explicitProject.note.id)
-  const profileTopic = ranked.some(({ note, score }) => score > 0 && (note.id !== 'current-work' || /\b(dipa|job|company|staffinc|currently|current|employer|role|career)\b/.test(q)) && /^(book:|education$|experience$|current-work$|contact$|reading$|music$|tifa$)/.test(note.id))
+  const profileTopic = Boolean(focusedNote && /^(book:|education$|experience$|current-work$|contact$|reading$|music$|tifa$)/.test(focus)) || ranked.some(({ note, score }) => score > 0 && (note.id !== 'current-work' || /\b(dipa|job|company|staffinc|currently|current|employer|role|career)\b/.test(q)) && /^(book:|education$|experience$|current-work$|contact$|reading$|music$|tifa$)/.test(note.id))
   if (!relevant.length && !profileTopic && !missingArticle && /\b(it|that|this|more|model|architecture|technical|what|which|how|why|stack|lesson|prompt|cache|training)\b/i.test(q)) {
     for (const message of messages.slice(0, -1).reverse()) {
       if (message.role !== 'user') continue
@@ -49,7 +52,8 @@ export function selectTifaContext(messages, notes, articles = []) {
     if (noteChars + length > MAX_NOTE_CHARS) return
     noteChars += length; seen.add(note.id); selected.push(note)
   }
-  for (const id of ['about', 'current-work', 'contact']) add(notes.find(note => note.id === id))
+  for (const id of ['tifa', 'about', 'current-work', 'contact']) add(notes.find(note => note.id === id))
+  add(focusedNote)
   for (const article of relevant) {
     add(notes.find(note => note.id === `project:${article.id}`))
     add(metadataNote(article))
@@ -75,7 +79,7 @@ export function selectTifaContext(messages, notes, articles = []) {
     remaining -= text.length
     excerpts.push({ sourceId: `article:${article.id}`, title: article.title, publishedAt: article.publishedAt, text })
   }
-  return { notes: selected, articles: excerpts }
+  return { notes: selected, articles: excerpts, focus }
 }
 
 export function compactTifaHistory(messages) {

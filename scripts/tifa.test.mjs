@@ -7,7 +7,7 @@ import { OrthographicCamera,Vector3 } from 'three'
 const compile=source=>ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.ESNext,target:ts.ScriptTarget.ES2020}}).outputText
 const url=code=>`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`
 const load=async name=>compile(await readFile(new URL(`../src/desk/${name}`,import.meta.url),'utf8'))
-const {answerTifa,normalizeQuestion}=await import(url(await load('tifaAnswers.ts')))
+const {answerTifa,normalizeQuestion}=await import(url((await load('tifaAnswers.ts')).replace("'../../server/tifaConversation.mjs'",JSON.stringify(new URL('../server/tifaConversation.mjs',import.meta.url).href))))
 const motionCode=await load('tifaMotion.ts')
 const {tifaHome,tifaMat,tifaPose,tifaPetIntensity,tifaFeet}=await import(url(motionCode))
 const {tifaLayout,tifaView}=await import(url((await load('tifaView.ts')).replace("'./tifaMotion'",`'${url(motionCode)}'`)))
@@ -22,7 +22,7 @@ const notes=[
   {id:'education',terms:['education','studied','university'],answer:'He studied at BINUS.',sources:[]},
   {id:'book:atomic',terms:['Atomic Habits','habits'],answer:'Small habits matter.',detail:'His reading notes.',sources:[{label:'reading',destination:'reading'}]},
   {id:'music',terms:['music','listening','spotify'],answer:'Open the speaker for live listening.',sources:[]},
-  {id:'tifa',terms:['tifa','dog','yorkie'],answer:'Tifa is his Yorkshire terrier.',sources:[]},
+  {id:'tifa',terms:['tifa','dog','yorkie'],answer:'I’m Tifa, Dipa’s virtual desk guide, inspired by his real Yorkshire terrier.',sources:[]},
 ]
 
 test('specific projects and books outrank broad work and project words',()=>{

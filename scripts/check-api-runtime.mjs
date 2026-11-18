@@ -12,7 +12,7 @@ try {
   if (result.error) throw result.error
   if (result.status !== 0) throw new Error('API compilation failed')
   await writeFile(join(directory, 'package.json'), JSON.stringify({ type: 'module' }))
-  for (const name of ['cloudStore', 'spotifyCore', 'tifa', 'tifaContext', 'vercelBackend']) {
+  for (const name of ['cloudStore', 'spotifyCore', 'tifa', 'tifaContext', 'tifaConversation', 'tifaProvider', 'vercelBackend']) {
     await copyFile(join(root, `server/${name}.mjs`), join(directory, `server/${name}.mjs`))
   }
   for (const route of ['api/tifa.js', 'api/spotify/now-playing.js']) {

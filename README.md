@@ -22,6 +22,8 @@ For local Spotify authorization, register `http://127.0.0.1:5173/api/spotify/cal
 - `POST /api/tifa`: bounded conversations, profile/article retrieval, Groq calls and a shared eight-request-per-minute visitor quota.
 - `GET /api/spotify/now-playing`: a sanitized public playback snapshot, shared five-second cache and distributed polling lease. Refresh tokens and last-observed tracks persist in Redis. Provider backoff also survives cold instances.
 
+Tifa answers a small set of supported identity, employment-date and hiring questions directly from the public profile, including during provider outages. Other questions use Groq with server-selected profile notes and article excerpts. The default chain is GPT-OSS 20B, then GPT-OSS 120B, both available on Groq’s free plan with compatible strict JSON output. Each model is tried at most once, with six seconds per attempt and a twelve-second shared deadline. Model unavailability, overload, model rate limits and invalid replies can trigger the alternate; invalid credentials and explicit account-wide quota errors cannot. If both fail, the browser shows saved profile notes and respects the returned retry interval. This does not remove Groq account quotas or guarantee capacity during a provider-wide outage.
+
 A free Upstash Redis database provides durable token storage and shared quotas. Both `UPSTASH_REDIS_REST_*` and Vercel integration `KV_REST_API_*` names are supported. Keep the database and functions in the same region.
 
 Configure **Production** variables before redeploying:
@@ -32,7 +34,8 @@ Configure **Production** variables before redeploying:
 | `SPOTIFY_REFRESH_TOKEN` | Secret | Initial PKCE connection token; subsequent rotations are saved in Redis |
 | `UPSTASH_REDIS_REST_TOKEN` or `KV_REST_API_TOKEN` | Secret | Redis write credential |
 | `SPOTIFY_CLIENT_ID` | Config | Public Spotify app ID |
-| `GROQ_MODEL` | Config | `openai/gpt-oss-20b` |
+| `GROQ_MODEL` | Config | Primary model; defaults to `openai/gpt-oss-20b` |
+| `GROQ_FALLBACK_MODEL` | Config | Optional override; defaults to `openai/gpt-oss-120b` (empty disables it) |
 | `UPSTASH_REDIS_REST_URL` or `KV_REST_API_URL` | Config | Redis REST endpoint |
 | `SITE_URL` | Config | Canonical production URL, including `https://` |
 
