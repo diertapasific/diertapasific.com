@@ -8,7 +8,7 @@ const notes=[{id:'work',answer:'Dipa works at Staffinc.',sources:[{label:'work e
 const env={GROQ_API_KEY:'test-only-key',ALLOWED_ORIGIN:'https://diertapasific.github.io'}
 const request=(body,origin='https://diertapasific.github.io')=>new Request('https://chat.example/',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)})
 const messages=[{role:'user',content:'Where does Dipa work?'}]
-const valid={reply:'Dipa works at Staffinc.',sourceIds:['work','unknown','work'],followups:['What has he built?']}
+const valid={kind:'answer',reply:'Dipa works at Staffinc.',sourceIds:['work','unknown','work'],followups:['What has he built?']}
 const result=data=>Response.json({choices:[{message:{content:JSON.stringify(data)}}]})
 
 test('the Groq request uses the configured replacement and server-owned profile',async()=>{
@@ -78,4 +78,30 @@ test('quota, timeout, connection and setup failures have distinct visitor messag
   assert.match(tifaUnavailableMessage('timeout'),/too long/)
   assert.match(tifaUnavailableMessage('setup_required'),/needs attention/)
   assert.notEqual(tifaUnavailableMessage('rate_limited'),tifaUnavailableMessage('connection_interrupted'))
+})
+
+
+test('unsupported and off-topic model replies become a server-owned contact handoff', async () => {
+  for (const kind of ['handoff', 'off_topic']) {
+    const response = await handleTifa(request({ messages: [{ role: 'user', content: kind === 'handoff' ? "What is Dipa’s GPA?" : 'Write me a calculator' }] }), env, notes, async () => result({ kind, reply: 'Unverified content that must never be shown.', sourceIds: ['work'] }))
+    assert.equal(response.status, 200)
+    const data = await response.json()
+    assert.match(data.reply, /ask Dipa directly/)
+    assert.doesNotMatch(data.reply, /Unverified/)
+    assert.deepEqual(data.answer.sources, [{ label: 'ask Dipa directly', destination: 'contact' }])
+  }
+})
+test('answers without a valid supporting profile source cannot be published as facts', async () => {
+  const response = await handleTifa(request({ messages }), env, notes, async () => result({ kind: 'answer', reply: 'An invented answer.', sourceIds: ['made-up-source'] }))
+  const data = await response.json()
+  assert.match(data.reply, /don’t have that detail/); assert.equal(data.answer.sources[0].destination, 'contact')
+  assert.doesNotMatch(data.reply, /invented/)
+})
+test('a claimed greeting cannot bypass the response handoff for arbitrary questions', async () => {
+  for (const question of ['Hello Tifa!', 'Solve my calculus homework']) {
+    const response = await handleTifa(request({ messages: [{ role: 'user', content: question }] }), env, notes, async () => result({ kind: 'greeting', reply: 'Unrelated model output.', sourceIds: [] }))
+    const data = await response.json()
+    assert.doesNotMatch(data.reply, /Unrelated model output/)
+    assert.equal(data.answer.sources.length, question.startsWith('Hello') ? 0 : 1)
+  }
 })
