@@ -67,7 +67,7 @@ const replySchema = { type: 'object', additionalProperties: false, required: ['k
 
 export async function handleTifa(request, env, notes, fetcher = fetch, articles = []) {
   const origin = request.headers.get('Origin') || ''
-  const allowed = (env.ALLOWED_ORIGIN || 'https://diertapasific.github.io').split(',').map(value => value.trim()).filter(Boolean)
+  const allowed = (env.ALLOWED_ORIGIN || 'https://www.diertapasific.com').split(',').map(value => value.trim()).filter(Boolean)
   const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Vary': 'Origin', 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' }
   const respond = (data, status = 200) => new Response(JSON.stringify(data), { status, headers })
   if (origin && !allowed.includes(origin)) return respond({ error: 'origin_denied' }, 403)

@@ -65,7 +65,7 @@ export const PROJECTS: Project[] = [
     description: 'Custom chatbot powered by a fine-tuned sentence transformer model converted to ONNX for client-side inference. Zero server costs, real-time semantic matching directly in the browser.',
     tags: ['ONNX', 'Transformers.js', 'TypeScript', 'Semantic Search'],
     links: [
-      { label: 'Repository', href: 'https://github.com/diertapasific/diertapasific.github.io', icon: 'github' },
+      { label: 'Repository', href: 'https://github.com/diertapasific/diertapasific.com', icon: 'github' },
     ],
   },
   {

@@ -1,5 +1,7 @@
 # Dipa's desk
 
+Live site: [diertapasific.com](https://www.diertapasific.com/) · Repository: [diertapasific/diertapasific.com](https://github.com/diertapasific/diertapasific.com)
+
 Dierta Pasific's interactive portfolio, built with React 18, TypeScript, Vite 6, Three.js, React Three Fiber and Tailwind CSS 3. The current experience is the monochrome blueprint desk in `src/desk`; older page components are retained for their shared content.
 
 The desk includes projects and Medium readers, an About book with experience and education, reading notes, Spotify listening status, a tabletop contact badge and lanyard, and Tifa, a profile-grounded Groq assistant. Tifa can use the full saved Medium text editions in `src/desk/data/medium-articles.json`. The active Yorkie is an original procedural model; the previous statue scan and CC BY attribution are retained under `public/assets/desk`.
@@ -44,7 +46,7 @@ The deployed speaker updates through Vercel when visited, including while the la
 
 The public canonical address, `https://www.diertapasific.com`, is tracked in `vite.config.ts` and used for canonical/social metadata in every build. This keeps Preview deployments and old hosting environment values from changing shared links. Update that address and redeploy when changing the production domain.
 
-The Vercel project is connected to the personal GitHub repository. Pull requests create Preview deployments; merging into `main` deploys Production. The `Portfolio checks` workflow runs the regression suite, compiled Node handler check, frontend build and retained Worker build. Preview backends remain unconfigured until separate secrets/storage are explicitly added. Changing Vercel environment variables requires a redeployment. The `portfolio-v1` tag preserves the site before the desk redesign.
+The Vercel project is connected to the personal GitHub repository, `diertapasific/diertapasific.com`. GitHub Pages is disabled; production hosting is on Vercel. Pull requests create Preview deployments; merging into `main` deploys Production. The `Portfolio checks` workflow runs the regression suite, compiled Node handler check, frontend build and retained Worker build. Preview backends remain unconfigured until separate secrets/storage are explicitly added. Changing Vercel environment variables requires a redeployment. The `portfolio-v1` tag preserves the site before the desk redesign.
 
 ## Validation and maintenance
 
