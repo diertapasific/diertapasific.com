@@ -28,6 +28,7 @@ import { TifaCompanion } from './TifaCompanion'
 import { tifaView } from './tifaView'
 import { DeskBackdrop } from './DeskBackdrop'
 import { FocusDismiss } from './SceneFocusDismiss'
+import { advanceCameraMotion, createCameraMotion } from './cameraMotion'
 
 type SceneProps = {
   dark: boolean; selected: Destination | null; onSelect: (id: Destination) => void; aboutSection: AboutSection; onAboutSection: (section: AboutSection) => void;
@@ -155,7 +156,7 @@ function Desk(props: ObjectProps & Pick<SceneProps, 'standing'> & { annotationPl
       <Target {...targetProps} id="about" position={[0, 0, 0]} marker={[bookPoses.about.rest[0], .85, bookPoses.about.rest[2] + .2]}><Notebook {...props} id="about" /></Target>
       <Target {...targetProps} id="reading" position={[0, 0, 0]} marker={[bookPoses.reading.rest[0], 1.25, bookPoses.reading.rest[2]]}><Notebook {...props} id="reading" /></Target>
       <Target {...targetProps} id="music" position={[0, 0, 0]} marker={[speakerPosition[0], 1.95, speakerPosition[2]]}><Speaker active={props.selected === 'music' && props.contentReady} {...props} /></Target>
-      <Target {...targetProps} id="writing" position={[0, 0, 0]} marker={[paperPosition[0], .95, paperPosition[2] + .15]}><ArticlePapers active={props.selected === 'writing' && props.contentReady} motion={props.motion} reducedMotion={props.reducedMotion} /></Target>
+      <Target {...targetProps} id="writing" position={[0, 0, 0]} marker={[paperPosition[0], .95, paperPosition[2] + .15]}><ArticlePapers dark={props.dark} active={props.selected === 'writing' && props.contentReady} motion={props.motion} reducedMotion={props.reducedMotion} /></Target>
       <Target {...targetProps} id="contact" position={[0, 0, 0]} marker={[cardPoses.rest[0], -1.3, cardPoses.rest[2] + .05]}><HangingCard dark={props.dark} selected={props.selected === 'contact'} active={props.selected === 'contact' && props.contentReady} motion={props.motion} reducedMotion={props.reducedMotion} /></Target>
       <group position={deskControlPosition}><Plate size={[.72, .23, .15]} radius={.045} color="#dcdcdc" ink="#777777" /><Face kind={props.standing ? 'height' : 'height-seated'} position={[-.16, 0, .077]} size={[.2, .14]} /><Stroke points={[[.06, 0, .078], [.13, .045, .078], [.2, 0, .078]]} /><Stroke points={[[.22, .035, .078], [.29, -.01, .078], [.35, .035, .078]]} /></group>
     </group>
@@ -172,11 +173,13 @@ const Ground = memo(function Ground() {
 
 function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, openingMode, opening, chatOpen }: Pick<SceneProps, 'selected' | 'reducedMotion' | 'standing' | 'openingMode' | 'chatOpen'> & { orbit: MutableRefObject<{ x: number; y: number }>; annotationPlan: MutableRefObject<AnnotationPlan | null>; opening: MutableRefObject<OpeningTimeline> }) {
   const { camera, size } = useThree()
-  const look = useRef(new THREE.Vector3(0, 2.5, 0)), start = useRef(true)
+  const start = useRef(true), travel = useMemo(createCameraMotion, [])
   const target = useMemo(() => new THREE.Vector3(), []), position = useMemo(() => new THREE.Vector3(), [])
   const focusUp = useMemo(() => new THREE.Vector3(), []), focusDirection = useMemo(() => new THREE.Vector3(), [])
+  const up = useMemo(() => new THREE.Vector3(0, 1, 0), [])
   useFrame((_, delta) => {
-    const dt = Math.min(delta, .05), cam = camera as THREE.OrthographicCamera
+    const cam = camera as THREE.OrthographicCamera
+    up.set(0, 1, 0)
     const h = deskHeight(standing)
     // Follow navigation immediately. Physical objects still close in sequence,
     // but the camera can pull back while they return to their resting poses.
@@ -186,12 +189,13 @@ function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, o
       target.set(...view.target);position.set(...view.offset).add(target);zoom=view.zoom
     } else if (selected) {
       const v = focusView(selected, size.width, size.height)
+      if (selected === 'writing' || selected === 'about' || selected === 'reading') up.set(0, 0, -1)
       target.set(...v.target); target.y += h; position.set(...v.offset).add(target); zoom = v.zoom
       // Account for top chrome vs the two-row mobile footer by shifting both
       // camera and target in the view's up direction, without view-offset matrices.
       const shift = v.shift / zoom
       focusDirection.set(...v.offset).normalize()
-      focusUp.set(0, 1, 0).projectOnPlane(focusDirection).normalize().multiplyScalar(-shift)
+      focusUp.copy(up).projectOnPlane(focusDirection).normalize().multiplyScalar(-shift)
       target.add(focusUp); position.add(focusUp)
     } else {
       const plan = annotationPlan.current
@@ -199,15 +203,14 @@ function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, o
       const view = overviewPose(size.width, size.height, orbit.current, standing, fit)
       if (openingMode !== 'none') {
         const arrival = openingPose(view, h, opening.current.progress, openingMode)
-        camera.position.set(...arrival.position); look.current.set(...arrival.target); camera.lookAt(look.current)
+        camera.position.set(...arrival.position); camera.lookAt(...arrival.target)
         cam.zoom = arrival.zoom; cam.updateProjectionMatrix(); start.current = false
         return
       }
       target.set(...view.target); position.set(...view.position); zoom = view.zoom
     }
-    const blend = reducedMotion || start.current ? 1 : 1 - Math.exp(-7.5 * dt)
-    camera.position.lerp(position, blend); look.current.lerp(target, blend); camera.lookAt(look.current)
-    cam.zoom = THREE.MathUtils.lerp(cam.zoom, zoom, blend); cam.updateProjectionMatrix(); start.current = false
+    advanceCameraMotion(cam, travel, position, target, up, zoom, delta, reducedMotion || start.current)
+    start.current = false
   })
   return null
 }
