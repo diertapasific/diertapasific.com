@@ -7,7 +7,6 @@ import Content from './Content'
 import { destinations, readLocation } from './model'
 import type { Destination, AboutSection } from './model'
 import './desk.css'
-import { BlueprintThemeFilter } from './BlueprintThemeFilter'
 import { initialOpeningMode, openingSessionKey } from './opening'
 import type { OpeningMode } from './opening'
 import { useTifaChat } from './useTifaChat'
@@ -156,7 +155,6 @@ export default function DeskExperience() {
   }, [ready, failed, onFailure, sceneKey])
 
   return <IconContext.Provider value={{ weight: 'light', size: 18 }}>
-    <BlueprintThemeFilter />
     <main data-theme={dark ? 'dark' : 'light'} data-opening={openingMode} aria-busy={opening || undefined} className={`desk-app relative min-h-[100dvh] w-full overflow-hidden bg-[#f6f6f6] text-[#2a2a2a] ${opening ? 'is-opening' : ''} ${focused ? 'has-selection' : ''} ${chatOpen?'has-chat':''} ${selected === 'about' || selected === 'reading' ? 'has-book' : ''} ${reducedMotion ? 'reduce-motion' : ''}`}>
       {!opening && <a href="#desk-index" className="skip-link">skip to navigation</a>}
       <header className="desk-header absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-5 md:px-10 md:py-7">

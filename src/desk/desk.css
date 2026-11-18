@@ -1,7 +1,9 @@
 html.desk-page, html.desk-page body { width: 100%; height: 100%; overflow: hidden; }
 .desk-app { height: 100dvh; font-family: 'Outfit', sans-serif; }
-/* Charcoal paper and pale ink share one transfer, including page turns. */
-.desk-app[data-theme="dark"] { filter: url(#blueprint-dark-theme); }
+/* Native filters include WebGL and transformed HTML in Safari's composite.
+   The same charcoal-paper / pale-ink transfer covers live and folded pages. */
+:root { --desk-dark-ink-filter: grayscale(1) invert(1) brightness(1.15) contrast(.88); }
+.desk-app[data-theme="dark"] { filter: var(--desk-dark-ink-filter); }
 .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 10px; line-height: 1.7; letter-spacing: .1em; text-transform: uppercase; color: #777777; }
 .desk-app button, .desk-app a { -webkit-tap-highlight-color: transparent; }
 .desk-app button:focus-visible, .desk-app a:focus-visible { outline: 2px solid #454545; outline-offset: 5px; }
@@ -169,7 +171,7 @@ html.desk-page, html.desk-page body { width: 100%; height: 100%; overflow: hidde
 .contact-card[data-theme="dark"] > header,
 .contact-card[data-theme="dark"] > button,
 .contact-card[data-theme="dark"][data-contact-face="back"] > .contact-card-body,
-.contact-card[data-theme="dark"][data-contact-face="front"] > .contact-card-body > div:not(.badge-portrait) { filter: url(#blueprint-dark-theme); }
+.contact-card[data-theme="dark"][data-contact-face="front"] > .contact-card-body > div:not(.badge-portrait) { filter: var(--desk-dark-ink-filter); }
 .contact-card button:focus-visible, .contact-card a:focus-visible { outline: 2px solid #454545; outline-offset: 3px; }
 
 /* One automatic arrival. The same scene, labels and screens stay mounted. */
