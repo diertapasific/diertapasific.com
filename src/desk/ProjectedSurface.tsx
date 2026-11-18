@@ -40,8 +40,9 @@ export function ProjectedSurface({ children, position, rotation, worldSize, pixe
     const presentation = surfacePresentation({ a, b, c, d, x: topLeft.x, y: topLeft.y, width: pixelWidth, height: pixelHeight }, nativeLayout)
     const node = element.current
     for (const property of ['transform', 'left', 'top'] as const) if (node.style[property] !== presentation[property]) node.style[property] = presentation[property]
-    node.style.visibility = a * d - b * c > 0 && Math.abs(topLeft.z) <= 1 ? 'visible' : 'hidden'
-    node.dataset.renderMode = presentation.mode
+    const visibility = a * d - b * c > 0 && Math.abs(topLeft.z) <= 1 ? 'visible' : 'hidden'
+    if (node.style.visibility !== visibility) node.style.visibility = visibility
+    if (node.dataset.renderMode !== presentation.mode) node.dataset.renderMode = presentation.mode
   }, [camera, size.width, size.height, pixelWidth, pixelHeight, worldSize[0], worldSize[1], points, nativeLayout])
   const attach = useCallback((node: HTMLDivElement | null) => {
     element.current = node
@@ -51,7 +52,7 @@ export function ProjectedSurface({ children, position, rotation, worldSize, pixe
   }, [project])
   useFrame(project)
   return <group ref={anchor} position={position} rotation={rotation}>
-    <Html wrapperClass={nativeLayout ? 'paper-surface-portal' : undefined} portal={portal} ref={attach} calculatePosition={origin} style={{ ...surfaceStyle, pointerEvents: interactive ? 'auto' : 'none' }} zIndexRange={[layer, layer]}>
+    <Html wrapperClass={nativeLayout ? 'native-surface-portal' : undefined} portal={portal} ref={attach} calculatePosition={origin} style={{ ...surfaceStyle, pointerEvents: interactive ? 'auto' : 'none' }} zIndexRange={[layer, layer]}>
       {children}
     </Html>
   </group>

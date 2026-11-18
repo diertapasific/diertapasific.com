@@ -1,7 +1,7 @@
 'use client'
 
-import { Component, lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { MutableRefObject, ReactNode, RefObject } from 'react'
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { MutableRefObject, RefObject } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import { ArrowUpRight } from '@phosphor-icons/react'
 import * as THREE from 'three'
@@ -13,21 +13,8 @@ import { motionProgress, paperPosition } from './motion'
 import type { DeskMotion } from './motion'
 import { advancePaperDeck, articleDisplayHeight, articleStackPose, articleTurnPose, createPaperDeck } from './articleMotion'
 import type { PaperDeck } from './articleMotion'
-import { loadPaperArticle } from './loadPaperArticle'
-
-const PaperArticleBody = lazy(loadPaperArticle)
-
-function ArticleBodyLoading() {
-  return <div role="status" aria-label="Loading article" className="mt-6 min-h-48 space-y-4">{[0, 1, 2, 3, 4].map(line => <div key={line} className={`h-3 animate-pulse bg-zinc-200 ${line === 4 ? 'w-2/3' : 'w-full'}`} />)}</div>
-}
-
-class ArticleReaderBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false }
-  static getDerivedStateFromError() { return { failed: true } }
-  render() {
-    return this.state.failed ? <div role="alert" className="mt-6 border-y border-zinc-300 py-4 text-sm leading-relaxed"><p>The article couldn't load.</p><button type="button" onClick={() => window.location.reload()} className="mt-2 min-h-11 underline underline-offset-4 active:scale-[.98]">reload article</button><p className="mt-2 text-xs text-zinc-500">You can also read the original on Medium below.</p></div> : this.props.children
-  }
-}
+import PaperArticleBody from './PaperArticleBody'
+import { ArticleReaderBoundary } from './ArticleReaderBoundary'
 
 const ArticleFace = memo(function ArticleFace({ index }: { index: number }) {
   const texture = useMemo(() => {
@@ -79,7 +66,7 @@ function ArticleSurface({ index, onSelect, elementRef, interactive, dark }: { da
       <article aria-label={post.title} className="surface-scroll min-h-0 flex-1 overflow-y-auto px-5 pb-6 pt-6">
         <p className="eyebrow">{post.date}</p>
         <h2 ref={heading} tabIndex={-1} className="mt-5 text-[27px] leading-[1.15] tracking-[-.035em] outline-none">{post.title}</h2>
-        <ArticleReaderBoundary><Suspense fallback={<ArticleBodyLoading />}><PaperArticleBody url={post.href} title={post.title} preview={post.preview} /></Suspense></ArticleReaderBoundary>
+        <ArticleReaderBoundary source={post.href}><PaperArticleBody url={post.href} title={post.title} preview={post.preview} /></ArticleReaderBoundary>
         <a href={post.href} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex min-h-11 items-center gap-2 text-[12px] text-zinc-500 underline decoration-zinc-400 underline-offset-4 active:scale-[.98]">original on Medium<ArrowUpRight size={14} /></a>
         <p className="mt-7 border-t border-zinc-200 pt-4 font-mono text-[9px] text-zinc-400">DIERTA PASIFIC / MEDIUM</p>
       </article>
@@ -94,7 +81,8 @@ const ArticleSheet = memo(function ArticleSheet({ index, outgoing, active, turni
     const pose = articleTurnPose(deck.current.progress)
     if (sheet.current) sheet.current.position.set(outgoing ? pose.x : 0, outgoing ? pose.height : turning ? pose.incomingHeight : articleDisplayHeight(motionProgress(motion.current, 'writing')), 0)
     // Hide the outgoing text before its physical sheet returns under the stack.
-    if (page.current) page.current.style.visibility = outgoing && deck.current.progress >= .48 ? 'hidden' : 'visible'
+    const visibility = outgoing && deck.current.progress >= .48 ? 'hidden' : 'visible'
+    if (page.current && page.current.style.visibility !== visibility) page.current.style.visibility = visibility
   }, -.5)
   return <group ref={sheet} position={[0, .2325, 0]}>
     <Block size={[1.2, .014, 1.65]} ink="#999999" color="#f8f8f8" />

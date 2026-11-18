@@ -1,4 +1,7 @@
 html.desk-page, html.desk-page body { width: 100%; height: 100%; overflow: hidden; }
+/* Only the object readers scroll; focus changes must never pan the desk document. */
+html.desk-page { overflow: clip; }
+html.desk-page body { position: fixed; inset: 0; }
 .desk-app { height: 100dvh; font-family: 'Outfit', sans-serif; }
 /* Native filters include WebGL and transformed HTML in Safari's composite.
    The same charcoal-paper / pale-ink transfer covers live and folded pages. */
@@ -220,7 +223,7 @@ html.desk-page, html.desk-page body { width: 100%; height: 100%; overflow: hidde
 
 /* The landed paper is outside the scene's theme filter and GPU transforms.
    Its nested scroll view keeps normal Safari text painting and touch scrolling. */
-.paper-surface-portal { position: fixed !important; transform: none !important; }
+.native-surface-portal { position: fixed !important; transform: none !important; }
 .writing-sheet { --sheet-paper: #f8f8f8; --sheet-ink: #2a2a2a; --sheet-body: #5b5b5b; --sheet-muted: #777; --sheet-line: #ccc; --sheet-soft: #ececec; --sheet-selected: #313131; --sheet-selected-ink: #f6f6f6; background: var(--sheet-paper); color: var(--sheet-ink); }
 .writing-sheet[data-theme="dark"] { color-scheme: dark; --sheet-paper: #181818; --sheet-ink: #e5e5e5; --sheet-body: #bdbdbd; --sheet-muted: #999; --sheet-line: #494949; --sheet-soft: #303030; --sheet-selected: #e3e3e3; --sheet-selected-ink: #262626; }
 .writing-sheet > header, .writing-sheet > nav { border-color: var(--sheet-line); color: var(--sheet-muted); }
@@ -234,3 +237,19 @@ html.desk-page, html.desk-page body { width: 100%; height: 100%; overflow: hidde
 .writing-sheet > nav button:hover { background: var(--sheet-soft); }
 .writing-sheet > nav button[aria-pressed="true"] { background: var(--sheet-selected); color: var(--sheet-selected-ink); }
 .writing-sheet :is(button, a):focus-visible { outline: 2px solid var(--sheet-ink); outline-offset: -2px; }
+
+/* Monitor and paper readers share native colors without a filtered scroller. */
+.surface-projects { --sheet-paper: #f8f8f8; --sheet-ink: #2a2a2a; --sheet-body: #5b5b5b; --sheet-muted: #777; --sheet-line: #ccc; --sheet-soft: #ececec; background: var(--sheet-paper); color: var(--sheet-ink); }
+.surface-projects[data-theme="dark"] { color-scheme: dark; --sheet-paper: #181818; --sheet-ink: #e5e5e5; --sheet-body: #bdbdbd; --sheet-muted: #999; --sheet-line: #494949; --sheet-soft: #303030; }
+.surface-projects[data-theme="dark"] [class*="bg-[#f8f8f8]"] { background-color: var(--sheet-paper); }
+.surface-projects[data-theme="dark"] :is([class*="border-zinc-"], [class*="divide-zinc-"] > *) { border-color: var(--sheet-line); }
+.surface-projects[data-theme="dark"] [class*="text-zinc-"] { color: var(--sheet-muted); }
+.surface-projects[data-theme="dark"] :is([class~="bg-zinc-200"], [class~="bg-zinc-200/70"]) { background-color: var(--sheet-soft); }
+.surface-projects[data-theme="dark"] [class*="hover:bg-zinc-200"]:hover { background-color: var(--sheet-soft); }
+.surface-projects[data-theme="dark"] [class*="bg-[#313131]"] { background-color: #dedede; color: #262626; }
+.surface-projects .monitor-document { color: var(--sheet-body); }
+.surface-projects .monitor-document :is(h1, h2, h3, h4, a) { color: var(--sheet-ink); }
+.surface-projects .monitor-document :is(blockquote, th, td, pre) { border-color: var(--sheet-line); }
+.surface-projects .monitor-document blockquote { color: var(--sheet-muted); }
+.surface-projects .monitor-document :is(code, pre) { background: var(--sheet-soft); }
+.surface-projects :is(button, a):focus-visible { outline: 2px solid var(--sheet-ink); outline-offset: -2px; }

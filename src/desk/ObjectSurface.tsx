@@ -63,9 +63,9 @@ export function ObjectSurface({ destination, position, rotation = [0, 0, 0], wor
     const timer = window.setTimeout(() => root.current?.querySelector<HTMLElement>('[data-surface-heading]')?.focus({ preventScroll: true }), reducedMotion ? 0 : 900)
     return () => window.clearTimeout(timer)
   }, [destination, reducedMotion, interactive])
-  return <ProjectedSurface position={position} rotation={rotation} worldSize={worldSize} pixelWidth={pixelWidth} pixelHeight={pixelHeight} interactive={interactive} nativeColors={destination === 'music'}>
+  return <ProjectedSurface position={position} rotation={rotation} worldSize={worldSize} pixelWidth={pixelWidth} pixelHeight={pixelHeight} interactive={interactive} nativeColors={destination === 'music' || destination === 'projects'} nativeLayout={destination === 'projects'}>
     <IconContext.Provider value={{ weight: 'light', size: 18 }}>
-      <div ref={root} data-object-surface={destination} aria-hidden={!interactive || undefined} className={`object-surface surface-${destination} ${reducedMotion ? 'reduce-motion' : ''}`} style={{ width: pixelWidth, height: pixelHeight, pointerEvents: interactive ? 'auto' : 'none' }}>
+      <div ref={root} data-theme={dark ? 'dark' : 'light'} data-object-surface={destination} aria-hidden={!interactive || undefined} className={`object-surface surface-${destination} ${reducedMotion ? 'reduce-motion' : ''}`} style={{ width: pixelWidth, height: pixelHeight, pointerEvents: interactive ? 'auto' : 'none' }}>
         {destination === 'projects' ? <ProjectWorkspace compact={view.mobile} height={pixelHeight} requestedProject={projectRequest} /> : destination === 'music' ? <MusicScreen active={interactive} dark={dark} compact={pixelHeight < 160} dense={pixelHeight < 100} /> : <div className="flex h-full min-h-0 flex-col bg-[#f8f8f8]">
           <div className="flex shrink-0 items-center justify-between border-b border-zinc-300 px-5 py-3"><span className="eyebrow">{destination === 'contact' ? 'personal space / visitor pass' : `${item.number} / ${item.object}`}</span><span className="font-mono text-[9px] text-zinc-400">DP</span></div>
           <div className="surface-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-6 pt-5">
