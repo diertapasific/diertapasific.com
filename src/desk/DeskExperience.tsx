@@ -17,6 +17,8 @@ import type { TifaSource } from './tifaAnswers'
 import { NativeWritingReader, useNativePaper } from './NativeWritingReader'
 import { SceneDevTools } from './SceneDevTools'
 import { writingReaderAvailable } from './nativePaperLayout'
+import { NativeReadingBackdrop } from './NativeReadingBackdrop'
+import type { NativeReadingFrame } from './nativeReadingScene'
 
 const DeskScene = lazy(() => import('./DeskScene'))
 
@@ -39,6 +41,7 @@ export default function DeskExperience() {
   // Normal visits always retain the 3D desk and its original rendering quality.
   const [paperCheck] = useState(() => new URLSearchParams(window.location.search).get('paper-check') === 'html')
   const [writingIndex, setWritingIndex] = useState(0)
+  const [readingFrame, setReadingFrame] = useState<NativeReadingFrame | null>(null)
   const [projectRequest,setProjectRequest] = useState<{id:string;revision:number;article?:boolean}|null>(null)
   const [openingMode, setOpeningMode] = useState<OpeningMode>(() => {
     let seen = false
@@ -62,14 +65,17 @@ export default function DeskExperience() {
   const returnFocus = useRef<HTMLElement | null>(null)
   const selected = route.destination
   const isolatedWriting = paperCheck && selected === 'writing'
+  const readingScene = nativeWriting && selected === 'writing' && !failed && !isolatedWriting
+  const scenePaused = isolatedWriting || (readingScene && readingFrame !== null)
   const writingOpen = writingReaderAvailable(selected, nativeWriting, failed || isolatedWriting)
   const chatOpen=Boolean(route.companion),focused=Boolean(selected)||chatOpen
   const opening = openingMode !== 'none' && !failed
   const active = destinations.find(item => item.id === selected)
-  const onReady = useCallback(() => setReady(true), [])
+  const onReady = useCallback(() => { setReady(true); setReadingFrame(null) }, [])
+  const onReadingFrame = useCallback((frame: NativeReadingFrame) => { setReady(false); setReadingFrame(frame) }, [])
   const onFailure = useCallback((reason: 'context-lost' | 'load-timeout' | 'render-error' = 'render-error') => {
     console.warn('desk_scene_failed', reason)
-    setFailure(reason); setReady(false); setOpeningMode('none')
+    setFailure(reason); setReadingFrame(null); setReady(false); setOpeningMode('none')
   }, [])
   const onOpeningComplete = useCallback(() => {
     try { sessionStorage.setItem(openingSessionKey, 'true') } catch { /* Arrival does not depend on persistence. */ }
@@ -165,10 +171,10 @@ export default function DeskExperience() {
     return () => window.removeEventListener('keydown', key)
   }, [navigate, selected, opening,chatOpen])
   useEffect(() => {
-    if (ready || failed || isolatedWriting) return
+    if (ready || failed || scenePaused) return
     const timer = window.setTimeout(() => onFailure('load-timeout'), 20000)
     return () => window.clearTimeout(timer)
-  }, [ready, failed, isolatedWriting, onFailure, sceneKey])
+  }, [ready, failed, scenePaused, onFailure, sceneKey])
 
   return <IconContext.Provider value={{ weight: 'light', size: 18 }}>
     {import.meta.env.DEV && new URLSearchParams(window.location.search).has('scene-checks') && <SceneDevTools />}
@@ -190,9 +196,10 @@ export default function DeskExperience() {
         <p className="mt-4 text-sm leading-relaxed text-zinc-500">engineer. builder. curious human.<br /><span className="text-zinc-700">take a look around.</span></p>
       </div>}
 
-      <div ref={sceneSurface} onClick={event => { if (failed && focused && event.target === event.currentTarget) onDismiss() }} className="scene-layer absolute inset-0" aria-label="Interactive 3D desk. Drag to look around or choose an object from the navigation.">
-        {!failed && !isolatedWriting && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
-        {!ready && !failed && !isolatedWriting && <SceneSkeleton />}
+      <div ref={sceneSurface} data-reading-scene={scenePaused ? 'paused' : readingFrame ? 'resuming' : 'live'} onClick={event => { if (failed && focused && event.target === event.currentTarget) onDismiss() }} className="scene-layer absolute inset-0" aria-label="Interactive 3D desk. Drag to look around or choose an object from the navigation.">
+        {!failed && !isolatedWriting && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene readingFrame={readingFrame} readingPaused={scenePaused} onReadingFrame={onReadingFrame} nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={readingFrame ? false : chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={readingFrame ? 'writing' : selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
+        {!ready && !failed && !scenePaused && !readingFrame && <SceneSkeleton />}
+        {readingFrame && <NativeReadingBackdrop frame={readingFrame} surface={sceneSurface} />}
         {failed && !chatOpen && !writingOpen && <div className="absolute inset-x-6 top-[45%] mx-auto max-w-sm border-y border-zinc-300 py-7 text-center"><p className="text-lg">The desk couldn't be drawn.</p><p className="mt-3 text-sm leading-relaxed text-zinc-500">You can still explore every section using the navigation below.</p><button onClick={() => { setFailure(null); setReady(false); setSceneKey(v => v + 1) }} className="mt-4 min-h-11 font-mono text-xs underline underline-offset-4">try loading again</button></div>}
       </div>
 
@@ -205,7 +212,7 @@ export default function DeskExperience() {
 
       {!focused && <div role="group" aria-label="Desk view controls" className="reset-view absolute bottom-[141px] right-5 z-[4] flex items-center md:bottom-[129px] md:right-10"><button disabled={opening || failed} aria-label="Zoom out on desk" title="Zoom out (−)" onClick={() => setZoomStep(v => v - 1)} className="flex size-11 items-center justify-center text-zinc-500 active:scale-[.98]"><MagnifyingGlassMinus size={16} /></button><button disabled={opening || failed} aria-label="Zoom in on desk" title="Zoom in (+)" onClick={() => setZoomStep(v => v + 1)} className="flex size-11 items-center justify-center text-zinc-500 active:scale-[.98]"><MagnifyingGlassPlus size={16} /></button><button disabled={opening} aria-label="Reset view" className="flex min-h-11 min-w-11 items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[.08em] text-zinc-500 active:scale-[.98]" onClick={() => setReset(v => v + 1)}><ArrowCounterClockwise size={16} /><span className="hidden sm:inline">reset view</span></button></div>}
 
-      {writingOpen && <NativeWritingReader fallback={failed} index={writingIndex} onSelect={setWritingIndex} dark={dark} surface={sceneSurface} />}
+      {((writingOpen && (!readingScene || readingFrame !== null)) || readingFrame !== null) && <NativeWritingReader closing={selected !== 'writing'} revealDelay={readingFrame ? 0 : 650} fallback={failed} index={writingIndex} onSelect={setWritingIndex} dark={dark} surface={sceneSurface} />}
 
       <TifaConversation open={chatOpen} chat={chat} surface={sceneSurface} onSource={onTifaSource} fallback={failed} />
 

@@ -276,3 +276,5 @@ html.desk-page body { position: fixed; inset: 0; }
 .writing-sheet ::selection { color: #2a2a2a; -webkit-text-fill-color: #2a2a2a; background: #d4d4d4; }
 .native-writing-reader { isolation: isolate; color-scheme: light; }
 .native-writing-reader[data-theme="dark"] { color-scheme: dark; }
+
+.native-writing-reader { transition: opacity .12s cubic-bezier(.16, 1, .3, 1); }
