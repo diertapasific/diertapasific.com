@@ -277,19 +277,25 @@ test('both pages of each book fit together on phones and desktops', () => {
 const annotationSource = await readFile(new URL('../src/desk/annotationLayout.ts', import.meta.url), 'utf8')
 const annotationCode = ts.transpileModule(annotationSource, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText
 const { annotationRect, annotationVisualSize, intersects } = await import(`data:text/javascript;base64,${Buffer.from(annotationCode).toString('base64')}`)
+const lanyardSource = await readFile(new URL('../src/desk/lanyardShape.ts', import.meta.url), 'utf8')
+const lanyardCode = ts.transpileModule(lanyardSource, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText.replace("'three'", JSON.stringify(new URL('../node_modules/three/build/three.module.js', import.meta.url).href))
+const lanyardModule = `data:text/javascript;base64,${Buffer.from(lanyardCode).toString('base64')}`
+const tableSource = await readFile(new URL('../src/desk/tableBadgeLayout.ts', import.meta.url), 'utf8')
+const tableCode = ts.transpileModule(tableSource, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText.replace("'./motion'", `'data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}'`).replaceAll("'./lanyardShape'", JSON.stringify(lanyardModule))
 const geometrySource = await readFile(new URL('../src/desk/annotationGeometry.ts', import.meta.url), 'utf8')
 const geometryCode = ts.transpileModule(geometrySource, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText.replace("'./motion'", `'data:text/javascript;base64,${Buffer.from(compiled).toString('base64')}'`)
-const { annotationObjects, annotationObstacles } = await import(`data:text/javascript;base64,${Buffer.from(geometryCode).toString('base64')}`)
+const resolvedGeometryCode = geometryCode.replace("'./tableBadgeLayout'", `'data:text/javascript;base64,${Buffer.from(tableCode).toString('base64')}'`)
+const { annotationObjects, annotationObstacles } = await import(`data:text/javascript;base64,${Buffer.from(resolvedGeometryCode).toString('base64')}`)
 
 const planSource = await readFile(new URL('../src/desk/annotationPlan.ts', import.meta.url), 'utf8')
 const planCode = ts.transpileModule(planSource, { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2020 } }).outputText
   .replace("'three'", JSON.stringify(new URL('../node_modules/three/build/three.module.js', import.meta.url).href))
   .replace("'./model'", `'data:text/javascript;base64,${Buffer.from(modelCode).toString('base64')}'`)
-  .replace("'./annotationGeometry'", `'data:text/javascript;base64,${Buffer.from(geometryCode).toString('base64')}'`)
+  .replace("'./annotationGeometry'", `'data:text/javascript;base64,${Buffer.from(resolvedGeometryCode).toString('base64')}'`)
   .replace("'./annotationLayout'", `'data:text/javascript;base64,${Buffer.from(annotationCode).toString('base64')}'`)
 const { createAnnotationPlan } = await import(`data:text/javascript;base64,${Buffer.from(planCode).toString('base64')}`)
 
-test('all six mobile cards follow their objects continuously without changing offsets', () => {
+test('all placed mobile cards follow their objects continuously without changing offsets', () => {
   for (const [width, height] of [[320, 480], [320, 568], [360, 600], [375, 667], [393, 852], [430, 932], [740, 390], [767, 1024]]) {
     const area = { left: 12, right: width - 12, top: 92, bottom: height - (width < 360 ? 161 : 148) }
     const chrome = [
@@ -298,8 +304,8 @@ test('all six mobile cards follow their objects continuously without changing of
       { left: width - 36, right: width - 20, top: height - 185, bottom: height - 141 },
     ]
     const plan = createAnnotationPlan(width, height, area, chrome, 3.1)
-    assert.ok(plan, `all six cards fit at ${width} x ${height}`)
-    assert.equal(plan.offsets.length, 6)
+    assert.ok(plan, `all placed cards fit at ${width} x ${height}`)
+    assert.equal(plan.offsets.length, annotationObjects.length)
     assert.ok(plan.zoom <= overviewView(width, height).zoom)
     const initial = JSON.stringify(plan.offsets)
     const camera = new OrthographicCamera(-width / 2, width / 2, height / 2, -height / 2, .1, 100)
@@ -483,4 +489,49 @@ test('paper focus, release and article turns finish in real time when Safari dro
     for(let elapsed=0;elapsed<1.1;elapsed+=delta)advancePaperDeck(deck,delta,false)
     assert.equal(deck.index,4);assert.equal(deck.progress,1);assert.equal(deck.from,null)
   }
+})
+
+
+const {tableBadgePose,tableBadgeClearanceY}=await import(`data:text/javascript;base64,${Buffer.from(tableCode).toString('base64')}`)
+const {createLanyardGeometry,lanyardBounds}=await import(lanyardModule)
+const ribbonTestGeometry=createLanyardGeometry()
+const ribbonVertices=ribbonTestGeometry.edges.flat()
+
+test('the table badge lifts, flips and returns without crossing the desktop or nearby objects',()=>{
+  const neighbors=stationary.filter(v=>!['pen'].includes(v.owner))
+  for(let step=0;step<=400;step++) for(const angle of [0,-.4,-Math.PI/2,-Math.PI]) {
+    const pose=tableBadgePose(step/400),position=[...pose.position]
+    position[1]=tableBadgeClearanceY(pose,angle)
+    const root=transform(position,[pose.pitch,0,pose.roll],pose.scale)
+    const flipped=root.clone().multiply(transform([0,0,0],[0,angle,0]))
+    const card=box('contact','table badge',[.60,.92,.052],[0,0,0],[0,0,0],flipped)
+    for(const other of neighbors) assert.ok(!card.bounds.intersectsOBB(other.bounds),`table badge crosses ${other.name} at ${step/400}, angle ${angle}`)
+    for(const point of ribbonVertices) {
+      const world=new Vector3(...point).applyMatrix4(flipped)
+      assert.ok(world.y>.08,'lanyard stays above the desktop')
+    }
+  }
+  const rest=tableBadgePose(0),open=tableBadgePose(1)
+  assert.equal(rest.pitch,-Math.PI/2);assert.ok(Math.abs(open.pitch)<1e-12)
+  assert.equal(rest.scale,.8,'the desk-sized badge and lanyard stay compact')
+  assert.equal(open.scale,1.8,'the approved focused size is preserved')
+  assert.deepEqual(open.position,[3.65,.5,3.4])
+})
+
+
+test('both ribbon edges stay inside the collision bounds through front and back flips',()=>{
+  for(const point of ribbonVertices)for(let axis=0;axis<3;axis++) {
+    assert.ok(point[axis]>=lanyardBounds.min[axis]&&point[axis]<=lanyardBounds.max[axis])
+  }
+  const pose=tableBadgePose(1),root=transform(pose.position,[pose.pitch,0,pose.roll],pose.scale)
+  for(const angle of [0,-Math.PI/2,-Math.PI]) {
+    const assembly=root.clone().multiply(transform([0,0,0],[0,angle,0]))
+    const clasp=new Vector3(0,.455,.017).applyMatrix4(assembly)
+    const left=new Vector3(-.05,.455,.017).applyMatrix4(assembly)
+    const right=new Vector3(.05,.455,.017).applyMatrix4(assembly)
+    assert.ok(Math.abs(left.distanceTo(right)-.1*pose.scale)<1e-8,'the clasp shares the card transform')
+    assert.ok(clasp.y>pose.position[1],'the attachment remains at the top of the badge')
+    assert.equal(tableBadgeClearanceY(pose,angle),pose.position[1],'flipping in focus must not shift the card up')
+  }
+  ribbonTestGeometry.geometry.dispose()
 })

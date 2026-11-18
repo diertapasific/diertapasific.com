@@ -62,6 +62,7 @@ html.desk-page body { position: fixed; inset: 0; overflow: clip; }
 @keyframes surface-arrive { 0%, 35% { opacity: 0; } 100% { opacity: 1; } }
 .object-label { position: relative; display: flex; align-items: center; gap: 9px; min-height: 34px; padding: 5px 10px; border: 1px solid #b6b6b6; background: #f6f6f6ed; color: #454545; white-space: nowrap; font-family: 'JetBrains Mono', monospace; font-size: 10px; transition: transform .3s cubic-bezier(.16,1,.3,1), background .2s, color .2s; }
 .object-label::after { content: ''; position: absolute; height: 17px; width: 1px; background: #a8a8a8; top: 100%; left: 50%; pointer-events: none; }
+.object-label.is-attached::after { display: none; }
 .object-label:hover, .object-label:focus-visible, .object-label.is-hovered { background: #313131; color: #f6f6f6; transform: translateY(-3px); }
 .object-label:active { transform: scale(.98); }
 .object-number { opacity: .55; font-size: 9px; }

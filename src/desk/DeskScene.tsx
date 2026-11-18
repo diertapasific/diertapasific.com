@@ -6,7 +6,7 @@ import { addAfterEffect, Canvas, useFrame, useThree } from '@react-three/fiber'
 import { Html } from '@react-three/drei'
 import * as THREE from 'three'
 import { destinations, deskHeight, focusView, overviewPose } from './model'
-import { advanceDeskMotion, bookPose, bookPoses, cardPoses, contentIsReady, createDeskMotion, motionProgress, deskControlPosition, deskDimensionLines, deskSize, deskmatPosition, monitorDepth, paperPosition, speakerPosition } from './motion'
+import { advanceDeskMotion, bookPose, bookPoses, contentIsReady, createDeskMotion, motionProgress, deskControlPosition, deskDimensionLines, deskSize, deskmatPosition, monitorDepth, speakerPosition } from './motion'
 import type { DeskMotion } from './motion'
 import type { AboutSection, Destination, Point } from './model'
 import { Block, Face, PAPER, Plate, Ring, Stroke } from './geometry'
@@ -19,6 +19,7 @@ import { Speaker } from './Speaker'
 import { ReadingBook } from './ReadingBook'
 import { ArticlePapers } from './ArticlePapers'
 import { ShelfObjects } from './ShelfObjects'
+import { tableBadgeRest } from './tableBadgeLayout'
 import { HangingCard } from './HangingCard'
 import { MobileDeskLabels } from './MobileDeskLabels'
 import type { AnnotationPlan } from './annotationPlan'
@@ -49,17 +50,25 @@ type SceneProps = {
 }
 type ObjectProps = Pick<SceneProps, 'dark' | 'selected' | 'onSelect' | 'aboutSection' | 'onAboutSection' | 'reducedMotion' | 'openingMode' | 'chatOpen' | 'projectRequest' | 'nativeWriting' | 'writingIndex' | 'onWritingIndex'> & { motion: MutableRefObject<DeskMotion>; contentReady: boolean }
 
-function Target({ id, position, marker, children, selected, hovered, onHover, onSelect, suppressClickUntil }: {
-  id: Destination; position: Point; marker: Point; children: ReactNode; selected: Destination | null; hovered: Destination | null; onHover: (id: Destination | null) => void; onSelect: (id: Destination) => void; suppressClickUntil: MutableRefObject<number>;
+function Target({ id, position, marker, labelOffset, children, selected, hovered, onHover, onSelect, suppressClickUntil }: {
+  id: Destination; position: Point; marker: Point; labelOffset?: [number, number]; children: ReactNode; selected: Destination | null; hovered: Destination | null; onHover: (id: Destination | null) => void; onSelect: (id: Destination) => void; suppressClickUntil: MutableRefObject<number>;
 }) {
   const item = destinations.find(d => d.id === id)!
   const mobile = useThree(state => state.size.width < 768)
+  const label = <button className={`object-label ${labelOffset ? 'is-attached' : ''} ${hovered === id ? 'is-hovered' : ''}`} style={{ pointerEvents: 'auto' }} aria-label={`Explore ${item.label}`} onPointerEnter={() => onHover(id)} onPointerLeave={() => onHover(null)} onClick={() => { if (performance.now() > suppressClickUntil.current) onSelect(id) }}><span className="object-number">{item.number}</span><span>{item.label}</span><span className="label-plus">+</span></button>
   return <group position={position} userData={{ deskFocus: id }}
     onPointerOver={e => { if (!selected) { e.stopPropagation(); onHover(id) } }}
     onPointerOut={() => onHover(null)}
     onClick={e => { e.stopPropagation(); if (!selected && e.delta < 6 && performance.now() > suppressClickUntil.current) onSelect(id) }}>
     {children}
-    {!selected && !mobile && <Html position={marker} center zIndexRange={[3, 1]}><button className={`object-label ${hovered === id ? 'is-hovered' : ''}`} aria-label={`Explore ${item.label}`} onPointerEnter={() => onHover(id)} onPointerLeave={() => onHover(null)} onClick={() => { if (performance.now() > suppressClickUntil.current) onSelect(id) }}><span className="object-number">{item.number}</span><span>{item.label}</span><span className="label-plus">+</span></button></Html>}
+    {!selected && !mobile && <Html position={marker} center={!labelOffset} zIndexRange={[3, 1]} style={labelOffset ? { pointerEvents: 'none' } : undefined}>
+      {labelOffset ? <div className="pointer-events-none relative size-0" data-attached-label={id}>
+        <svg aria-hidden="true" width="1" height="1" className="absolute left-0 top-0 overflow-visible" fill="none" stroke="#a8a8a8" strokeWidth=".7">
+          <path d={`M0,0 L${labelOffset[0]},${labelOffset[1] + 17}`} /><circle r="1.5" fill="#f6f6f6" />
+        </svg>
+        <div className="absolute left-0 top-0" style={{ transform: `translate(${labelOffset[0]}px,${labelOffset[1]}px) translate(-50%,-50%)` }}>{label}</div>
+      </div> : label}
+    </Html>}
   </group>
 }
 
@@ -167,8 +176,8 @@ function Desk(props: ObjectProps & Pick<SceneProps, 'standing'> & { annotationPl
       <Target {...targetProps} id="about" position={[0, 0, 0]} marker={[bookPoses.about.rest[0], .85, bookPoses.about.rest[2] + .2]}><Notebook {...props} id="about" /></Target>
       <Target {...targetProps} id="reading" position={[0, 0, 0]} marker={[bookPoses.reading.rest[0], 1.25, bookPoses.reading.rest[2]]}><Notebook {...props} id="reading" /></Target>
       <Target {...targetProps} id="music" position={[0, 0, 0]} marker={[speakerPosition[0], 1.95, speakerPosition[2]]}><Speaker active={props.selected === 'music' && props.contentReady} {...props} /></Target>
-      <Target {...targetProps} id="writing" position={[0, 0, 0]} marker={[paperPosition[0], .95, paperPosition[2] + .15]}><ArticlePapers nativeReader={props.nativeWriting} index={props.writingIndex} onIndex={props.onWritingIndex} dark={props.dark} active={props.selected === 'writing' && props.contentReady} motion={props.motion} reducedMotion={props.reducedMotion} /></Target>
-      <Target {...targetProps} id="contact" position={[0, 0, 0]} marker={[cardPoses.rest[0], -1.3, cardPoses.rest[2] + .05]}><HangingCard dark={props.dark} selected={props.selected === 'contact'} active={props.selected === 'contact' && props.contentReady} motion={props.motion} reducedMotion={props.reducedMotion} /></Target>
+      {props.selected === 'writing' && <group><ArticlePapers nativeReader={props.nativeWriting} index={props.writingIndex} onIndex={props.onWritingIndex} dark={props.dark} active={props.contentReady} motion={props.motion} reducedMotion={props.reducedMotion} /></group>}
+      {props.selected !== 'writing' && <Target {...targetProps} id="contact" position={[0, 0, 0]} marker={[tableBadgeRest[0], tableBadgeRest[1] + .03, tableBadgeRest[2]]} labelOffset={[-35, -68]}><HangingCard onTable dark={props.dark} selected={props.selected === 'contact'} active={props.selected === 'contact' && props.contentReady} motion={props.motion} reducedMotion={props.reducedMotion} /></Target>}
       <group position={deskControlPosition}><Plate size={[.72, .23, .15]} radius={.045} color="#dcdcdc" ink="#777777" /><Face kind={props.standing ? 'height' : 'height-seated'} position={[-.16, 0, .077]} size={[.2, .14]} /><Stroke points={[[.06, 0, .078], [.13, .045, .078], [.2, 0, .078]]} /><Stroke points={[[.22, .035, .078], [.29, -.01, .078], [.35, .035, .078]]} /></group>
     </group>
     <Stroke points={[[-deskSize[0] / 2 - .3, .02, deskDimensionLines.widthZ], [deskSize[0] / 2 + .3, .02, deskDimensionLines.widthZ]]} color="#bcbcbc" />

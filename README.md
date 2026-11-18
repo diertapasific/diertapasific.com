@@ -2,7 +2,7 @@
 
 Dierta Pasific's interactive portfolio, built with React 18, TypeScript, Vite 6, Three.js, React Three Fiber and Tailwind CSS 3. The current experience is the monochrome blueprint desk in `src/desk`; older page components are retained for their shared content.
 
-The desk includes projects and Medium readers, an About book with experience and education, reading notes, Spotify listening status, writing, a reversible contact badge, and Tifa, a profile-grounded Groq assistant. Tifa can use the full saved Medium text editions in `src/desk/data/medium-articles.json`. The active Yorkie is an original procedural model; the previous statue scan and CC BY attribution are retained under `public/assets/desk`.
+The desk includes projects and Medium readers, an About book with experience and education, reading notes, Spotify listening status, a tabletop contact badge and lanyard, and Tifa, a profile-grounded Groq assistant. Tifa can use the full saved Medium text editions in `src/desk/data/medium-articles.json`. The active Yorkie is an original procedural model; the previous statue scan and CC BY attribution are retained under `public/assets/desk`.
 
 ## Local development
 
@@ -57,7 +57,11 @@ npm run build:worker
 
 Tests cover camera/focus transitions, companion motion, Tifa contracts and retrieval, Spotify OAuth/state handling, cloud token persistence, caching and quotas. Provider mocks validate behavior; a successful live response is separate proof of credential access.
 
-Writing uses its original live 3D paper mechanism on desktop, phone and tablet. The camera and graphics context stay active, the full saved article is displayed on the projected paper, and switching articles moves the physical sheets on mobile too. The same renderer handles entry and return, with no bitmap handoff or renderer warmup. Articles are bundled full text editions, not fetched from Medium while scrolling.
+The desk contact badge rests in the former writing zone with a loose, overlapping lanyard. Its compact resting scale is 0.8; the focused scale remains 1.8. The badge, ribbon and clasp share the flip transform and clear the tabletop during interrupted returns. Desktop and mobile labels anchor to the badge. Writing is absent from the dock and desk overview; project articles remain available inside the monitor, and legacy Writing URLs still work.
+
+The book curl keeps its original 3D mechanism. Its alignment gate now accepts half a CSS pixel of size rounding plus a tiny camera/float tolerance, fixing a reproduced stall at the preview/landing boundary. Width and height regression cases, the existing tiny top-down camera tilt, and forward/reverse browser turns at the reproducing viewport are covered. Verification on the affected physical iPhone remains separate.
+
+Legacy Writing uses its original live 3D paper mechanism on desktop, phone and tablet. The camera and graphics context stay active, the full saved article is displayed on the projected paper, and switching articles moves the physical sheets on mobile too. The same renderer handles entry and return, with no bitmap handoff or renderer warmup. Articles are bundled full text editions, not fetched from Medium while scrolling.
 
 Refresh the saved public articles with `python3 scripts/sync-medium-articles.py`, then rebuild. Current profile notes override historical biography. VeganFuel has no Medium write-up. The legacy Cloudflare Worker remains under `worker/`; it is not the backend used by the Vercel build. Building it does not publish it. The legacy GitHub Pages workflow is manual-only so pushes no longer deploy a second copy with unavailable server endpoints.
 
