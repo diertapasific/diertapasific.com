@@ -5,8 +5,8 @@ import ts from 'typescript'
 import { handleTifa, DEFAULT_MODEL, MAX_BODY_BYTES } from '../server/tifa.mjs'
 
 const notes=[{id:'work',answer:'Dipa works at Staffinc.',sources:[{label:'work experience',destination:'about',section:'experience'}]}]
-const env={GROQ_API_KEY:'test-only-key',ALLOWED_ORIGIN:'https://diertapasific.github.io'}
-const request=(body,origin='https://diertapasific.github.io')=>new Request('https://chat.example/',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)})
+const env={GROQ_API_KEY:'test-only-key',ALLOWED_ORIGIN:'https://www.diertapasific.com'}
+const request=(body,origin='https://www.diertapasific.com')=>new Request('https://chat.example/',{method:'POST',headers:{'Content-Type':'application/json',Origin:origin},body:JSON.stringify(body)})
 const messages=[{role:'user',content:'Where does Dipa work?'}]
 const valid={kind:'answer',reply:'Dipa works at Staffinc.',sourceIds:['work','unknown','work'],followups:['What has he built?']}
 const result=data=>Response.json({choices:[{message:{content:JSON.stringify(data)}}]})
