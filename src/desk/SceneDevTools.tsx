@@ -23,7 +23,7 @@ export function SceneDevProbe() {
       const action = (event as CustomEvent<string>).detail
       if (action === 'sample') {
         const size = gl.getDrawingBufferSize(new Vector2())
-        window.dispatchEvent(new CustomEvent(sample, { detail: { rendererId, trace: trace.current.samples, contextLost: gl.getContext().isContextLost(), frames: gl.info.render.frame, loop: get().frameloop, dpr: gl.getPixelRatio(), size: size.toArray(), antialias: gl.getContext().getContextAttributes()?.antialias } }))
+        window.dispatchEvent(new CustomEvent(sample, { detail: { rendererId, trace: trace.current.samples, cameraZoom: get().camera.zoom, contextLost: gl.getContext().isContextLost(), frames: gl.info.render.frame, loop: get().frameloop, dpr: gl.getPixelRatio(), size: size.toArray(), antialias: gl.getContext().getContextAttributes()?.antialias } }))
       } else if (action === 'trace-return') trace.current = { active: true, samples: [] }
       else if (action === 'lose-context') gl.getContext().getExtension('WEBGL_lose_context')?.loseContext()
       else if (action === 'render-error') setCrash(true)

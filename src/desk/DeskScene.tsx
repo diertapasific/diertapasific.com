@@ -184,6 +184,12 @@ function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, o
   const { camera, size } = useThree()
   const start = useRef(true), travel = useMemo(createCameraMotion, [])
   const returnFrames = useRef(readingFrame ? 8 : 0)
+  useLayoutEffect(() => {
+    // Hidden canvases keep their measuring box. Keep the retained camera fitted
+    // to the same paper after a toolbar resize or tablet rotation, without
+    // drawing frames or resetting it when the destination changes on exit.
+    if (keepRenderer && readingFrame) landReadingCamera(camera as THREE.OrthographicCamera, size.width, size.height, standing)
+  }, [camera, keepRenderer, readingFrame, size.width, size.height, standing])
   const target = useMemo(() => new THREE.Vector3(), []), position = useMemo(() => new THREE.Vector3(), [])
   const focusUp = useMemo(() => new THREE.Vector3(), []), focusDirection = useMemo(() => new THREE.Vector3(), [])
   const up = useMemo(() => new THREE.Vector3(0, 1, 0), [])
