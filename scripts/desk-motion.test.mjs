@@ -460,3 +460,13 @@ test('closing the ID during the hint keeps the card clear of the tabletop and ne
     assert.equal(state.angle, 0)
   }
 })
+
+
+test('rapid article choices queue the latest sheet and finish without a loading gate',()=>{
+  const deck=createPaperDeck()
+  deck.requested=1;advancePaperDeck(deck,1/60,false)
+  assert.equal(deck.from,0);assert.equal(deck.index,1)
+  deck.requested=3;deck.requested=5
+  for(let frame=0;frame<180;frame++)advancePaperDeck(deck,1/60,false)
+  assert.equal(deck.index,5);assert.equal(deck.from,null);assert.equal(deck.progress,1)
+})
