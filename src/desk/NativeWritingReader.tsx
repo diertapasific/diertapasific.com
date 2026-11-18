@@ -1,19 +1,20 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import type { RefObject } from 'react'
 import { createPortal } from 'react-dom'
-import { ArticlePage } from './ArticlePage'
+import { NativeArticleDeck } from './NativeArticleDeck'
 import { nativePaperLayout, nativePaperQuery } from './nativePaperLayout'
 
 export function useNativePaper() {
-  const [native, setNative] = useState(() => window.matchMedia(nativePaperQuery).matches)
+  const forceTouchCheck = import.meta.env.DEV && new URLSearchParams(window.location.search).get('scene-checks') === 'touch'
+  const [native, setNative] = useState(() => forceTouchCheck || window.matchMedia(nativePaperQuery).matches)
   useEffect(() => {
     const media = window.matchMedia(nativePaperQuery)
-    const update = () => setNative(media.matches)
+    const update = () => setNative(forceTouchCheck || media.matches)
     update(); media.addEventListener('change', update)
     return () => media.removeEventListener('change', update)
-  }, [])
+  }, [forceTouchCheck])
   return native
 }
 
@@ -22,7 +23,6 @@ export function NativeWritingReader({ index, onSelect, dark, surface, fallback =
 }) {
   const [size, setSize] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }))
   const [landed, setLanded] = useState(false)
-  const page = useRef<HTMLDivElement>(null)
   useLayoutEffect(() => {
     const node = surface.current
     if (!node) return
@@ -43,6 +43,6 @@ export function NativeWritingReader({ index, onSelect, dark, surface, fallback =
   }, [revealDelay])
   const layout = nativePaperLayout(size.width, size.height)
   return createPortal(<div data-native-writing-reader data-theme={dark ? 'dark' : 'light'} data-scene-failed={fallback || undefined} className="native-writing-reader" hidden={!landed} style={{ ...layout, position: 'fixed', opacity: closing ? 0 : 1, pointerEvents: closing ? 'none' : undefined }}>
-    <ArticlePage key={index} index={index} onSelect={onSelect} dark={dark} interactive={landed && !closing} elementRef={page} width={layout.width} height={layout.height} />
+    <NativeArticleDeck index={index} onSelect={onSelect} dark={dark} interactive={landed && !closing} width={layout.width} height={layout.height} />
   </div>, document.body)
 }

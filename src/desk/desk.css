@@ -278,3 +278,5 @@ html.desk-page body { position: fixed; inset: 0; }
 .native-writing-reader[data-theme="dark"] { color-scheme: dark; }
 
 .native-writing-reader { transition: opacity .12s cubic-bezier(.16, 1, .3, 1); }
+
+[data-sheet-outgoing="true"] .writing-sheet { outline: 1px solid var(--sheet-line); }

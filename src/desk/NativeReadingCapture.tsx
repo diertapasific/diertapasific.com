@@ -1,54 +1,53 @@
 'use client'
 
-import { useLayoutEffect } from 'react'
+import { useLayoutEffect, useRef } from 'react'
 import type { MutableRefObject } from 'react'
-import { addAfterEffect, useThree } from '@react-three/fiber'
-import { Vector3 } from 'three'
-import { paperPosition } from './motion'
-import { deskHeight } from './model'
+import { addAfterEffect, useFrame, useThree } from '@react-three/fiber'
+import type { OrthographicCamera } from 'three'
 import type { DeskMotion } from './motion'
-import { nativePaperLayout } from './nativePaperLayout'
+import { landReadingCamera } from './readingCamera'
+import { nativeReadingApproachMs } from './nativeReadingScene'
 import type { NativeReadingFrame } from './nativeReadingScene'
 
-export function NativeReadingCapture({ motion, standing, intentionalLoss, onCapture, onFailure }: {
-  motion: MutableRefObject<DeskMotion>; standing: boolean; intentionalLoss: MutableRefObject<boolean>; onCapture: (frame: NativeReadingFrame) => void; onFailure: () => void;
+export function NativeReadingCapture({ motion, standing, onCapture, onFailure }: {
+  motion: MutableRefObject<DeskMotion>; standing: boolean; onCapture: (frame: NativeReadingFrame) => void; onFailure: () => void;
 }) {
   const { gl, camera, size } = useThree()
+  const started = useRef<number | null>(null), landed = useRef(false)
+  const timeoutCheck = import.meta.env.DEV && new URLSearchParams(window.location.search).get('scene-checks') === 'timeout'
+  useFrame(() => {
+    if (timeoutCheck || motion.current.id !== 'writing') { started.current = null; return }
+    started.current ??= performance.now()
+    if (performance.now() - started.current >= nativeReadingApproachMs) {
+      motion.current.progress = 1; landed.current = true
+    }
+  }, -1)
+  useFrame(() => {
+    // Finish the last subpixel of the approach at a bounded time. Waiting for
+    // exact convergence made slow phones sit on the cover for several seconds.
+    if (landed.current) landReadingCamera(camera as OrthographicCamera, size.width, size.height, standing)
+  })
   useLayoutEffect(() => {
-    if (import.meta.env.DEV && new URLSearchParams(window.location.search).get('scene-checks') === 'timeout') return
-    let cancelled = false, pending = false
-    const point = new Vector3(), layout = nativePaperLayout(size.width, size.height)
+    if (timeoutCheck) return
+    let captured = false
     const stop = addAfterEffect(() => {
-      if (pending || motion.current.id !== 'writing' || motion.current.progress !== 1) return
-      camera.updateMatrixWorld()
-      // Capture only after the physical paper and guided camera match the
-      // native reader to subpixel accuracy, after the frame has actually drawn.
-      for (const [x, z, screenX, screenY] of [
-        [-.575, -.8, layout.left, layout.top],
-        [.575, .8, layout.left + layout.width, layout.top + layout.height],
-      ]) {
-        point.set(paperPosition[0] + x, deskHeight(standing) + .565, paperPosition[2] + z).project(camera)
-        if (Math.abs((point.x + 1) * size.width / 2 - screenX) > 1 || Math.abs((1 - point.y) * size.height / 2 - screenY) > 1) return
-      }
-      pending = true
-      let image: string
+      if (captured || !landed.current || gl.getContext().isContextLost()) return
+      captured = true
       try {
-        image = gl.domElement.toDataURL('image/png')
-        if (!image.startsWith('data:image/png')) throw new Error('The reading frame was empty')
-      } catch { onFailure(); return }
-      const frame: NativeReadingFrame = { image, width: size.width, height: size.height }
-      const decoded = new Image()
-      decoded.src = image
-      void decoded.decode().then(() => {
-        if (cancelled) return
-        // A stopped animation loop alone did not fix the affected iPhone.
-        // Release the context before painting the long native text scroller.
-        intentionalLoss.current = true
-        gl.forceContextLoss()
+        const copy = document.createElement('canvas')
+        copy.width = gl.domElement.width; copy.height = gl.domElement.height
+        const context = copy.getContext('2d', { willReadFrequently: true })
+        if (!context) throw new Error('The paper background could not be copied')
+        context.drawImage(gl.domElement, 0, 0)
+        const pixels = context.getImageData(0, 0, copy.width, copy.height)
+        copy.width = 0; copy.height = 0
+        const frame: NativeReadingFrame = { pixels, width: size.width, height: size.height, captureMs: performance.now() - started.current! }
+        // The old renderer is disposed while reading. Returning creates a fresh
+        // renderer; the normal Canvas unmount handles resource disposal.
         onCapture(frame)
-      }, () => { if (!cancelled) onFailure() })
+      } catch { onFailure() }
     })
-    return () => { cancelled = true; stop() }
-  }, [gl, camera, size.width, size.height, motion, standing, intentionalLoss, onCapture, onFailure])
+    return stop
+  }, [gl, size.width, size.height, onCapture, onFailure, timeoutCheck])
   return null
 }

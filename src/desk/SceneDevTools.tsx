@@ -11,7 +11,7 @@ export function SceneDevProbe() {
   const { gl, get } = useThree()
   const [crash, setCrash] = useState(false)
   const [rendererId] = useState(() => crypto.randomUUID())
-  const trace = useRef<{ active: boolean; samples: { state: string; dt: number; zoom: number }[] }>({ active: false, samples: [] })
+  const trace = useRef<{ active: boolean; samples: { state: string; dt: number; zoom: number }[] }>({ active: true, samples: [] })
   useFrame(({ camera }, dt) => {
     if (!trace.current.active) return
     const state = document.querySelector<HTMLElement>('.scene-layer')?.dataset.readingScene || 'live'
@@ -42,7 +42,14 @@ export function SceneDevTools() {
     window.addEventListener(sample, receive)
     return () => window.removeEventListener(sample, receive)
   }, [])
-  const run = (action: string) => window.dispatchEvent(new CustomEvent(command, { detail: action }))
+  const run = (action: string) => {
+    if (action === 'sample' && document.querySelector('.scene-layer[data-reading-scene="paused"]')) {
+      const surface = document.querySelector<HTMLElement>('.scene-layer')
+      setReport(JSON.stringify({ loop: 'unmounted', backdrop: Boolean(surface?.querySelector('[data-reading-backdrop]')), captureMs: surface?.dataset.readingCaptureMs }))
+      return
+    }
+    window.dispatchEvent(new CustomEvent(command, { detail: action }))
+  }
   return createPortal(<aside aria-label="Local scene checks" style={{ position: 'fixed', bottom: 130, left: 8, zIndex: 100, background: '#f6f6f6', color: '#333', padding: 8, fontSize: 11, maxWidth: 'calc(100% - 16px)' }}>
     <button onClick={() => run('sample')}>Sample scene</button>
     <button onClick={() => run('trace-return')}>Trace return</button>

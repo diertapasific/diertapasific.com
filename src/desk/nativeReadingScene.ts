@@ -2,8 +2,10 @@ import { nativePaperLayout } from './nativePaperLayout'
 import { focusView } from './model'
 
 export type NativeReadingFrame = {
-  image: string; width: number; height: number;
+  pixels: ImageData; width: number; height: number; captureMs: number;
 }
+
+export const nativeReadingApproachMs = 650
 
 // An orthographic, top-down frame can be resized around the paper's anchor.
 // This retains the desk and paper stack through Safari toolbar/rotation changes.
