@@ -42,6 +42,9 @@ export default function DeskExperience() {
   const [paperCheck] = useState(() => import.meta.env.DEV && new URLSearchParams(window.location.search).get('paper-check') === 'html')
   const [writingIndex, setWritingIndex] = useState(0)
   const [readingFrame, setReadingFrame] = useState<NativeReadingFrame | null>(null)
+  const [parkRequested] = useState(() => new URLSearchParams(window.location.search).get('camera') === 'parked')
+  const [parkInvalid, setParkInvalid] = useState(false)
+  const keepRenderer = parkRequested && !parkInvalid
   const [projectRequest,setProjectRequest] = useState<{id:string;revision:number;article?:boolean}|null>(null)
   const [openingMode, setOpeningMode] = useState<OpeningMode>(() => {
     let seen = false
@@ -73,7 +76,8 @@ export default function DeskExperience() {
   const chatOpen=Boolean(route.companion),focused=Boolean(selected)||chatOpen
   const opening = openingMode !== 'none' && !failed
   const active = destinations.find(item => item.id === selected)
-  const onReady = useCallback(() => { setReady(true); setReadingFrame(null) }, [])
+  const onReady = useCallback(() => { setReady(true); setReadingFrame(null); setParkInvalid(false) }, [])
+  const onParkedLoss = useCallback(() => { setParkInvalid(true); setReady(false); setSceneKey(key => key + 1) }, [])
   const onReadingFrame = useCallback((frame: NativeReadingFrame) => {
     // Navigation may commit before the separate scene root receives new props.
     // A late capture must not lock another destination to the Writing camera.
@@ -84,6 +88,11 @@ export default function DeskExperience() {
     console.warn('desk_scene_failed', reason)
     setFailure(reason); setReadingFrame(null); setReady(false); setOpeningMode('none')
   }, [])
+  useLayoutEffect(() => {
+    if (keepRenderer && scenePaused) document.body.setAttribute('data-desk-scene-parked', '')
+    else document.body.removeAttribute('data-desk-scene-parked')
+    return () => document.body.removeAttribute('data-desk-scene-parked')
+  }, [keepRenderer, scenePaused])
   const onOpeningComplete = useCallback(() => {
     try { sessionStorage.setItem(openingSessionKey, 'true') } catch { /* Arrival does not depend on persistence. */ }
     setOpeningMode('none')
@@ -203,8 +212,8 @@ export default function DeskExperience() {
         <p className="mt-4 text-sm leading-relaxed text-zinc-500">engineer. builder. curious human.<br /><span className="text-zinc-700">take a look around.</span></p>
       </div>}
 
-      <div ref={sceneSurface} data-reading-capture-ms={import.meta.env.DEV ? readingFrame?.captureMs.toFixed(1) : undefined} data-reading-scene={scenePaused ? 'paused' : readingFrame ? 'resuming' : 'live'} onClick={event => { if ((failed || scenePaused) && focused && event.target === event.currentTarget) onDismiss() }} className="scene-layer absolute inset-0" aria-label="Interactive 3D desk. Drag to look around or choose an object from the navigation.">
-        {!failed && !scenePaused && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene readingFrame={readingFrame} onReadingFrame={onReadingFrame} nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={readingFrame ? false : chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={readingFrame ? 'writing' : selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
+      <div ref={sceneSurface} data-reading-strategy={keepRenderer ? 'parked' : parkRequested ? 'fresh-fallback' : 'fresh'} data-reading-capture-ms={import.meta.env.DEV ? readingFrame?.captureMs.toFixed(1) : undefined} data-reading-scene={scenePaused ? 'paused' : readingFrame ? 'resuming' : 'live'} onClick={event => { if ((failed || scenePaused) && focused && event.target === event.currentTarget) onDismiss() }} className="scene-layer absolute inset-0" aria-label="Interactive 3D desk. Drag to look around or choose an object from the navigation.">
+        {!failed && (!scenePaused || keepRenderer) && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene keepRenderer={keepRenderer} readingPaused={scenePaused} onParkedLoss={onParkedLoss} readingFrame={readingFrame} onReadingFrame={onReadingFrame} nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={readingFrame && !keepRenderer ? false : chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={readingFrame && !keepRenderer ? 'writing' : selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
         {!ready && !failed && !scenePaused && !readingFrame && <SceneSkeleton />}
         {readingFrame && <NativeReadingBackdrop frame={readingFrame} surface={sceneSurface} />}
         {failed && !chatOpen && !writingOpen && <div className="absolute inset-x-6 top-[45%] mx-auto max-w-sm border-y border-zinc-300 py-7 text-center"><p className="text-lg">The desk couldn't be drawn.</p><p className="mt-3 text-sm leading-relaxed text-zinc-500">You can still explore every section using the navigation below.</p><button onClick={() => { setFailure(null); setReady(false); setSceneKey(v => v + 1) }} className="mt-4 min-h-11 font-mono text-xs underline underline-offset-4">try loading again</button></div>}
@@ -219,7 +228,7 @@ export default function DeskExperience() {
 
       {!focused && <div role="group" aria-label="Desk view controls" className="reset-view absolute bottom-[141px] right-5 z-[4] flex items-center md:bottom-[129px] md:right-10"><button disabled={opening || failed} aria-label="Zoom out on desk" title="Zoom out (−)" onClick={() => setZoomStep(v => v - 1)} className="flex size-11 items-center justify-center text-zinc-500 active:scale-[.98]"><MagnifyingGlassMinus size={16} /></button><button disabled={opening || failed} aria-label="Zoom in on desk" title="Zoom in (+)" onClick={() => setZoomStep(v => v + 1)} className="flex size-11 items-center justify-center text-zinc-500 active:scale-[.98]"><MagnifyingGlassPlus size={16} /></button><button disabled={opening} aria-label="Reset view" className="flex min-h-11 min-w-11 items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[.08em] text-zinc-500 active:scale-[.98]" onClick={() => setReset(v => v + 1)}><ArrowCounterClockwise size={16} /><span className="hidden sm:inline">reset view</span></button></div>}
 
-      {((writingOpen && (!readingScene || readingFrame !== null)) || readingFrame !== null) && <NativeWritingReader closing={selected !== 'writing'} revealDelay={readingFrame ? 0 : 650} fallback={failed} index={writingIndex} onSelect={setWritingIndex} dark={dark} surface={sceneSurface} />}
+      {((writingOpen && (!readingScene || readingFrame !== null)) || readingFrame !== null) && <NativeWritingReader instantClose={keepRenderer} closing={selected !== 'writing'} revealDelay={readingFrame ? 0 : 650} fallback={failed} index={writingIndex} onSelect={setWritingIndex} dark={dark} surface={sceneSurface} />}
 
       <TifaConversation open={chatOpen} chat={chat} surface={sceneSurface} onSource={onTifaSource} fallback={failed} />
 

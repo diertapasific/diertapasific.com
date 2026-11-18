@@ -37,6 +37,7 @@ import { landReadingCamera, readingReturnDelta } from './readingCamera'
 const initialCamera = { position: [8, 8, 12] as Point, zoom: 70, near: .1, far: 100 }
 
 type SceneProps = {
+  keepRenderer: boolean; readingPaused: boolean; onParkedLoss: () => void;
   readingFrame: NativeReadingFrame | null; onReadingFrame: (frame: NativeReadingFrame) => void;
   nativeWriting: boolean; writingIndex: number; onWritingIndex: (index: number) => void;
   dark: boolean; selected: Destination | null; onSelect: (id: Destination) => void; aboutSection: AboutSection; onAboutSection: (section: AboutSection) => void;
@@ -179,7 +180,7 @@ const Ground = memo(function Ground() {
   return <lineSegments><bufferGeometry><bufferAttribute attach="attributes-position" args={[points, 3]} /></bufferGeometry><lineBasicMaterial color="#d4d4d4" transparent opacity={.28} /></lineSegments>
 })
 
-function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, openingMode, opening, chatOpen, readingFrame }: Pick<SceneProps, 'selected' | 'reducedMotion' | 'standing' | 'openingMode' | 'chatOpen' | 'readingFrame'> & { orbit: MutableRefObject<{ x: number; y: number; zoom: number }>; annotationPlan: MutableRefObject<AnnotationPlan | null>; opening: MutableRefObject<OpeningTimeline> }) {
+function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, openingMode, opening, chatOpen, readingFrame, keepRenderer }: Pick<SceneProps, 'selected' | 'reducedMotion' | 'standing' | 'openingMode' | 'chatOpen' | 'readingFrame' | 'keepRenderer'> & { orbit: MutableRefObject<{ x: number; y: number; zoom: number }>; annotationPlan: MutableRefObject<AnnotationPlan | null>; opening: MutableRefObject<OpeningTimeline> }) {
   const { camera, size } = useThree()
   const start = useRef(true), travel = useMemo(createCameraMotion, [])
   const returnFrames = useRef(readingFrame ? 8 : 0)
@@ -219,18 +220,19 @@ function CameraRig({ selected, reducedMotion, standing, orbit, annotationPlan, o
       target.set(...view.target); position.set(...view.position); zoom = view.zoom
     }
     const recovering = !readingFrame && returnFrames.current > 0
-    advanceCameraMotion(cam, travel, position, target, up, zoom, readingReturnDelta(delta, recovering), reducedMotion || start.current || Boolean(readingFrame))
+    advanceCameraMotion(cam, travel, position, target, up, zoom, readingReturnDelta(delta, recovering), reducedMotion || start.current || (Boolean(readingFrame) && !keepRenderer))
     if (recovering) returnFrames.current--
     start.current = false
   })
   return null
 }
 
-function Ready({ onReady, onFailure, readingFrame }: Pick<SceneProps, 'onReady' | 'onFailure' | 'readingFrame'>) {
+function Ready({ onReady, onFailure, readingFrame, keepRenderer, readingPaused, onParkedLoss }: Pick<SceneProps, 'onReady' | 'onFailure' | 'readingFrame' | 'keepRenderer' | 'readingPaused' | 'onParkedLoss'>) {
   const { gl } = useThree()
-  const restarting = useRef(Boolean(readingFrame)).current, delta = useRef(0)
+  const needsWarmup = useRef(Boolean(readingFrame) && !keepRenderer), delta = useRef(0)
   useFrame((_, dt) => { delta.current = dt })
   useLayoutEffect(() => {
+    if (readingPaused) return
     let notified = false, frames = 0, lastFrame = gl.info.render.frame
     const started = performance.now()
     const stop = addAfterEffect(() => {
@@ -239,16 +241,21 @@ function Ready({ onReady, onFailure, readingFrame }: Pick<SceneProps, 'onReady' 
       lastFrame = current; frames++
       // Keep the copied paper view until the fresh renderer has warmed up.
       // The camera stays at Writing until this completes, then travels normally.
-      if (restarting && (frames < 3 || delta.current > .08) && performance.now() - started < 350) return
-      notified = true; onReady()
+      if (needsWarmup.current && (frames < 3 || delta.current > .08) && performance.now() - started < 350) return
+      notified = true; needsWarmup.current = false; onReady()
     })
+    return stop
+  }, [gl, onReady, readingPaused])
+  const hasSnapshot = Boolean(readingFrame)
+  useLayoutEffect(() => {
     const lost = (event: Event) => {
       event.preventDefault()
-      onFailure('context-lost')
+      if (keepRenderer && hasSnapshot) onParkedLoss()
+      else onFailure('context-lost')
     }
     gl.domElement.addEventListener('webglcontextlost', lost)
-    return () => { stop(); gl.domElement.removeEventListener('webglcontextlost', lost) }
-  }, [gl, onReady, onFailure, restarting])
+    return () => gl.domElement.removeEventListener('webglcontextlost', lost)
+  }, [gl, onFailure, onParkedLoss, keepRenderer, hasSnapshot])
   return null
 }
 
@@ -264,7 +271,7 @@ function AnimatedDesk(props: SceneProps & { annotationPlan: MutableRefObject<Ann
       setPresentation(next)
     }
   }, -2)
-  return <><CameraRig {...props} /><Ground /><DeskOpening mode={props.openingMode} timeline={props.opening} height={deskHeight(props.standing)} surface={props.surface} onComplete={props.onOpeningComplete}><DeskBackdrop chatting={Boolean(props.chatOpen)} openingMode={props.openingMode}><Desk {...props} selected={presentation.id} contentReady={presentation.ready} /></DeskBackdrop><TifaCompanion dark={props.dark} enabled={!props.selected&&!props.chatOpen&&props.openingMode==='none'} chatting={Boolean(props.chatOpen)} replyPulse={props.replyPulse??0} onAsk={props.onAsk} suppressClickUntil={props.suppressClickUntil} reducedMotion={props.reducedMotion} /></DeskOpening><Ready onReady={props.onReady} onFailure={props.onFailure} readingFrame={props.readingFrame} />{!props.readingFrame && props.nativeWriting && props.selected === 'writing' && <NativeReadingCapture motion={props.motion} standing={props.standing} onCapture={props.onReadingFrame} onFailure={captureFailure} />}</>
+  return <><CameraRig {...props} /><Ground /><DeskOpening mode={props.openingMode} timeline={props.opening} height={deskHeight(props.standing)} surface={props.surface} onComplete={props.onOpeningComplete}><DeskBackdrop chatting={Boolean(props.chatOpen)} openingMode={props.openingMode}><Desk {...props} selected={presentation.id} contentReady={presentation.ready} /></DeskBackdrop><TifaCompanion dark={props.dark} enabled={!props.selected&&!props.chatOpen&&props.openingMode==='none'} chatting={Boolean(props.chatOpen)} replyPulse={props.replyPulse??0} onAsk={props.onAsk} suppressClickUntil={props.suppressClickUntil} reducedMotion={props.reducedMotion} /></DeskOpening><Ready onReady={props.onReady} onFailure={props.onFailure} readingFrame={props.readingFrame} keepRenderer={props.keepRenderer} readingPaused={props.readingPaused} onParkedLoss={props.onParkedLoss} />{!props.readingFrame && props.nativeWriting && props.selected === 'writing' && <NativeReadingCapture motion={props.motion} standing={props.standing} onCapture={props.onReadingFrame} onFailure={captureFailure} />}</>
 }
 
 export default function DeskScene(props: SceneProps) {
@@ -272,7 +279,7 @@ export default function DeskScene(props: SceneProps) {
   const motion = useRef<DeskMotion>(props.readingFrame ? { id: 'writing', progress: 1 } : createDeskMotion())
   const opening = useRef(createOpeningTimeline(props.openingMode))
   const annotationPlan = useRef<AnnotationPlan | null>(null)
-  return <Canvas frameloop="always" flat orthographic camera={initialCamera} onCreated={({ camera, size }) => { if (props.readingFrame) landReadingCamera(camera as THREE.OrthographicCamera, size.width, size.height, props.standing) }} dpr={[1, 2]} gl={{ antialias: true, alpha: true, localClippingEnabled: true }}>
+  return <Canvas className="desk-renderer" data-reading-parked={props.readingPaused || undefined} frameloop={props.readingPaused ? 'never' : 'always'} flat orthographic camera={initialCamera} onCreated={({ camera, size }) => { if (props.readingFrame) landReadingCamera(camera as THREE.OrthographicCamera, size.width, size.height, props.standing) }} dpr={[1, 2]} gl={{ antialias: true, alpha: true, localClippingEnabled: true }}>
     <FocusDismiss focus={props.openingMode === 'none' ? props.chatOpen ? 'tifa' : props.selected : null} onDismiss={props.onDismiss} />
     <AnimatedDesk {...props} opening={opening} annotationPlan={annotationPlan} motion={motion} orbit={orbit} suppressClickUntil={suppressClickUntil} />
     {import.meta.env.DEV && new URLSearchParams(window.location.search).has('scene-checks') && <SceneDevProbe />}
