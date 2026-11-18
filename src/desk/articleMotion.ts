@@ -6,7 +6,7 @@ export function advancePaperDeck(deck: PaperDeck, delta: number, reduced: boolea
     deck.from = deck.index; deck.index = deck.requested; deck.progress = 0
   }
   if (deck.from !== null) {
-    deck.progress = Math.min(1, deck.progress + Math.min(Math.max(delta, 0), .05) / .95)
+    deck.progress = Math.min(1, deck.progress + (Number.isFinite(delta) ? Math.min(Math.max(delta, 0), 1) : 0) / .95)
     if (deck.progress === 1) deck.from = null
   }
 }

@@ -57,4 +57,6 @@ npm run build:worker
 
 Tests cover camera/focus transitions, companion motion, Tifa contracts and retrieval, Spotify OAuth/state handling, cloud token persistence, caching and quotas. Provider mocks validate behavior; a successful live response is separate proof of credential access.
 
+On narrow screens and touch devices, Writing uses an ordinary body-level paper reader with the same geometry, typography, article picker and saved full editions as the desktop 3D paper. Its text, scroll position and selection do not depend on WebGL frame callbacks. This avoids large transformed article layers and delayed controls in iPhone Safari; desktop paper transitions remain in the scene.
+
 Refresh the saved public articles with `python3 scripts/sync-medium-articles.py`, then rebuild. Current profile notes override historical biography. VeganFuel has no Medium write-up. The legacy Cloudflare Worker remains under `worker/`; it is not the backend used by the Vercel build. Building it does not publish it. The legacy GitHub Pages workflow is manual-only so pushes no longer deploy a second copy with unavailable server endpoints.

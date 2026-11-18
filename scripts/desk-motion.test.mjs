@@ -470,3 +470,17 @@ test('rapid article choices queue the latest sheet and finish without a loading 
   for(let frame=0;frame<180;frame++)advancePaperDeck(deck,1/60,false)
   assert.equal(deck.index,5);assert.equal(deck.from,null);assert.equal(deck.progress,1)
 })
+
+
+test('paper focus, release and article turns finish in real time when Safari drops frames',()=>{
+  for(const delta of [1/60,1/10,1]){
+    const focus=createDeskMotion()
+    for(let elapsed=0;elapsed<1.1;elapsed+=delta)advanceDeskMotion(focus,'writing',delta,false)
+    assert.equal(contentIsReady(focus,'writing'),true)
+    for(let elapsed=0;elapsed<1.1;elapsed+=delta)advanceDeskMotion(focus,null,delta,false)
+    assert.equal(focus.id,null);assert.equal(focus.progress,0)
+    const deck=createPaperDeck();deck.requested=4
+    for(let elapsed=0;elapsed<1.1;elapsed+=delta)advancePaperDeck(deck,delta,false)
+    assert.equal(deck.index,4);assert.equal(deck.progress,1);assert.equal(deck.from,null)
+  }
+})

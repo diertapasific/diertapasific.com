@@ -257,3 +257,8 @@ html.desk-page body { position: fixed; inset: 0; }
   .desk-app :is(button, a, [role="button"]), [data-object-surface] :is(button, a), .contact-card :is(button, a), .scene-layer canvas { cursor: var(--desk-pointer); }
   .desk-app :is(input, textarea), .monitor-document, .surface-scroll, .tifa-bubble p, .tifa-user-bubble p { cursor: text; }
 }
+
+
+/* Touch readers keep the same paper geometry without a transformed, filtered,
+   frame-driven HTML root. Safari can tile the full article as it scrolls. */
+.native-writing-reader { z-index: 8; transform: none; filter: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
