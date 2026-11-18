@@ -48,9 +48,11 @@ export function MobileDeskLabels({ height, annotationPlan, onSelect, suppressCli
     const plan = annotationPlan.current
     if (!root.current || !plan || plan.width !== size.width || plan.height !== size.height) return
     camera.updateMatrixWorld()
-    const matrix = [...camera.matrixWorldInverse.elements, ...camera.projectionMatrix.elements]
-    if (drawnPlan.current === plan && matrix.every((value, i) => Math.abs(value - lastMatrix.current[i]) < .000001)) return
-    lastMatrix.current.set(matrix); drawnPlan.current = plan
+    const view = camera.matrixWorldInverse.elements, lens = camera.projectionMatrix.elements
+    let changed = drawnPlan.current !== plan
+    for (let i = 0; i < 16; i++) if (Math.abs(view[i] - lastMatrix.current[i]) >= .000001 || Math.abs(lens[i] - lastMatrix.current[i + 16]) >= .000001 || Number.isNaN(lastMatrix.current[i])) changed = true
+    if (!changed) return
+    lastMatrix.current.set(view); lastMatrix.current.set(lens, 16); drawnPlan.current = plan
     anchors.forEach((anchor, i) => {
       project.copy(anchor).project(camera)
       const x = (project.x + 1) * size.width / 2, y = (1 - project.y) * size.height / 2

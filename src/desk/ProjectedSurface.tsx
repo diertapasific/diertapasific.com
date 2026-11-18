@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { Html } from '@react-three/drei'
 import { useFrame, useThree } from '@react-three/fiber'
-import { Group, Vector3 } from 'three'
+import { Group, Matrix4, Vector3 } from 'three'
 import type { Point } from './model'
 import { createSurfaceTracker, surfaceHasSettled, surfacePresentation } from './surfaceProjection'
 
@@ -22,11 +22,19 @@ export function ProjectedSurface({ children, position, rotation, worldSize, pixe
   const element = useRef<HTMLDivElement | null>(null)
   const tracker = useRef(createSurfaceTracker())
   const { camera, size } = useThree()
+  const projection = useMemo(() => ({ world: new Matrix4(), camera: new Matrix4(), lens: new Matrix4(), valid: false }), [camera, size.width, size.height, pixelWidth, pixelHeight, worldSize[0], worldSize[1], nativeLayout])
   const points = useMemo(() => [new Vector3(), new Vector3(), new Vector3()], [])
   const project = useCallback(() => {
     if (!anchor.current || !element.current) return
     anchor.current.updateWorldMatrix(true, false)
     camera.updateMatrixWorld()
+    // A stationary screen/page has no new projection work. Native readers
+    // still get their two settling frames before this fast path is allowed.
+    if (projection.valid && (!nativeLayout || tracker.current.frames === 2) && projection.world.equals(anchor.current.matrixWorld) && projection.camera.equals(camera.matrixWorldInverse) && projection.lens.equals(camera.projectionMatrix)) return
+    projection.world.copy(anchor.current.matrixWorld)
+    projection.camera.copy(camera.matrixWorldInverse)
+    projection.lens.copy(camera.projectionMatrix)
+    projection.valid = true
     const [topLeft, topRight, bottomLeft] = points
     topLeft.set(-worldSize[0] / 2, worldSize[1] / 2, 0)
     topRight.set(worldSize[0] / 2, worldSize[1] / 2, 0)
@@ -45,13 +53,13 @@ export function ProjectedSurface({ children, position, rotation, worldSize, pixe
     const visibility = a * d - b * c > 0 && Math.abs(topLeft.z) <= 1 ? 'visible' : 'hidden'
     if (node.style.visibility !== visibility) node.style.visibility = visibility
     if (node.dataset.renderMode !== presentation.mode) node.dataset.renderMode = presentation.mode
-  }, [camera, size.width, size.height, pixelWidth, pixelHeight, worldSize[0], worldSize[1], points, nativeLayout])
+  }, [camera, size.width, size.height, pixelWidth, pixelHeight, worldSize[0], worldSize[1], points, nativeLayout, projection])
   const attach = useCallback((node: HTMLDivElement | null) => {
     element.current = node
     // Html mounts into a separate React root. Position it synchronously on
     // attachment so a newly mounted page never paints at the viewport origin.
-    if (node) project()
-  }, [project])
+    if (node) { projection.valid = false; tracker.current = createSurfaceTracker(); project() }
+  }, [project, projection])
   useFrame(project)
   return <group ref={anchor} position={position} rotation={rotation}>
     <Html wrapperClass={`scene-surface-portal${nativeLayout ? ' native-surface-portal' : ''}`} portal={portal} ref={attach} calculatePosition={origin} style={{ ...surfaceStyle, pointerEvents: interactive ? 'auto' : 'none' }} zIndexRange={[layer, layer]}>

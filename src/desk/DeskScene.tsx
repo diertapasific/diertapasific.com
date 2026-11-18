@@ -9,7 +9,8 @@ import { destinations, deskHeight, focusView, overviewPose } from './model'
 import { advanceDeskMotion, bookPose, bookPoses, cardPoses, contentIsReady, createDeskMotion, motionProgress, deskControlPosition, deskDimensionLines, deskSize, deskmatPosition, monitorDepth, paperPosition, speakerPosition } from './motion'
 import type { DeskMotion } from './motion'
 import type { AboutSection, Destination, Point } from './model'
-import { Block, Face, Keyboard, PAPER, Plate, Ring, Stroke } from './geometry'
+import { Block, Face, PAPER, Plate, Ring, Stroke } from './geometry'
+import { Keyboard } from './Keyboard'
 import { Mouse } from './Mouse'
 import { ObjectSurface } from './ObjectSurface'
 import { useDeskDrag } from './useDeskDrag'
@@ -37,6 +38,7 @@ import { landReadingCamera, readingReturnDelta } from './readingCamera'
 const initialCamera = { position: [8, 8, 12] as Point, zoom: 70, near: .1, far: 100 }
 
 type SceneProps = {
+  browserVisible: boolean;
   keepRenderer: boolean; readingPaused: boolean; onParkedLoss: () => void;
   readingFrame: NativeReadingFrame | null; onReadingFrame: (frame: NativeReadingFrame) => void;
   nativeWriting: boolean; writingIndex: number; onWritingIndex: (index: number) => void;
@@ -285,7 +287,7 @@ export default function DeskScene(props: SceneProps) {
   const motion = useRef<DeskMotion>(props.readingFrame ? { id: 'writing', progress: 1 } : createDeskMotion())
   const opening = useRef(createOpeningTimeline(props.openingMode))
   const annotationPlan = useRef<AnnotationPlan | null>(null)
-  return <Canvas className="desk-renderer" data-reading-parked={props.readingPaused || undefined} frameloop={props.readingPaused ? 'never' : 'always'} flat orthographic camera={initialCamera} onCreated={({ camera, size }) => { if (props.readingFrame) landReadingCamera(camera as THREE.OrthographicCamera, size.width, size.height, props.standing) }} dpr={[1, 2]} gl={{ antialias: true, alpha: true, localClippingEnabled: true }}>
+  return <Canvas className="desk-renderer" data-reading-parked={props.readingPaused || undefined} frameloop={props.readingPaused || !props.browserVisible ? 'never' : 'always'} flat orthographic camera={initialCamera} onCreated={({ camera, size }) => { if (props.readingFrame) landReadingCamera(camera as THREE.OrthographicCamera, size.width, size.height, props.standing) }} dpr={[1, 2]} gl={{ antialias: true, alpha: true, localClippingEnabled: true }}>
     <FocusDismiss focus={props.openingMode === 'none' ? props.chatOpen ? 'tifa' : props.selected : null} onDismiss={props.onDismiss} />
     <AnimatedDesk {...props} opening={opening} annotationPlan={annotationPlan} motion={motion} orbit={orbit} suppressClickUntil={suppressClickUntil} />
     {import.meta.env.DEV && new URLSearchParams(window.location.search).has('scene-checks') && <SceneDevProbe />}

@@ -16,7 +16,7 @@ export function CurlingPage({ forward, front, back, onStart, onComplete }: { for
     const geometry = new PlaneGeometry(width, height, columns, rows)
     geometry.setAttribute('position', new BufferAttribute(surface.positions, 3))
     geometry.setAttribute('color', new BufferAttribute(surface.colors, 3))
-    geometry.computeVertexNormals(); geometry.computeBoundingSphere()
+    geometry.computeBoundingSphere()
     const edgeIndices = [
       ...Array.from({ length: columns + 1 }, (_, i) => i),
       ...Array.from({ length: rows }, (_, i) => (i + 1) * (columns + 1) + columns),
@@ -43,15 +43,16 @@ export function CurlingPage({ forward, front, back, onStart, onComplete }: { for
     const positions = paper.geometry.attributes.position, colors = paper.geometry.attributes.color
     updatePaperSurface(paper.surface, progress)
     positions.needsUpdate = true; colors.needsUpdate = true
-    paper.geometry.computeVertexNormals(); paper.geometry.computeBoundingSphere()
+    // MeshBasicMaterial uses the authored vertex shades, not surface normals.
+    // Bounds are irrelevant for this short-lived sheet: it stays in view.
     const edge = paper.outline.attributes.position
     paper.edgeIndices.forEach((index, i) => edge.setXYZ(i, positions.getX(index), positions.getY(index), positions.getZ(index)))
-    edge.needsUpdate = true; paper.outline.computeBoundingSphere()
+    edge.needsUpdate = true
     if (t === 1) { paper.done = true; onComplete() }
   })
   return <group ref={hinge} position={[bookSpineX, paperElevation(forward ? 0 : 1), 0]}>
-    <mesh geometry={paper.geometry}><meshBasicMaterial map={front} side={FrontSide} vertexColors /></mesh>
-    <mesh geometry={paper.geometry}><meshBasicMaterial map={back} side={BackSide} vertexColors /></mesh>
-    <lineLoop geometry={paper.outline}><lineBasicMaterial ref={edgeInk} color="#a5a5a5" transparent opacity={0} /></lineLoop>
+    <mesh geometry={paper.geometry} frustumCulled={false}><meshBasicMaterial map={front} side={FrontSide} vertexColors /></mesh>
+    <mesh geometry={paper.geometry} frustumCulled={false}><meshBasicMaterial map={back} side={BackSide} vertexColors /></mesh>
+    <lineLoop geometry={paper.outline} frustumCulled={false}><lineBasicMaterial ref={edgeInk} color="#a5a5a5" transparent opacity={0} /></lineLoop>
   </group>
 }
