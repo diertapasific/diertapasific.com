@@ -4,17 +4,11 @@ import { useEffect, useLayoutEffect, useState } from 'react'
 import type { RefObject } from 'react'
 import { createPortal } from 'react-dom'
 import { NativeArticleDeck } from './NativeArticleDeck'
-import { nativePaperLayout, nativePaperQuery } from './nativePaperLayout'
+import { nativePaperLayout, nativeWritingRequested } from './nativePaperLayout'
 
 export function useNativePaper() {
   const forceTouchCheck = import.meta.env.DEV && new URLSearchParams(window.location.search).get('scene-checks') === 'touch'
-  const [native, setNative] = useState(() => forceTouchCheck || window.matchMedia(nativePaperQuery).matches)
-  useEffect(() => {
-    const media = window.matchMedia(nativePaperQuery)
-    const update = () => setNative(forceTouchCheck || media.matches)
-    update(); media.addEventListener('change', update)
-    return () => media.removeEventListener('change', update)
-  }, [forceTouchCheck])
+  const [native] = useState(() => forceTouchCheck || nativeWritingRequested(window.location.search))
   return native
 }
 

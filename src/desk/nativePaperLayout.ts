@@ -14,7 +14,12 @@ export function nativePaperLayout(width: number, height: number) {
   }
 }
 
-export const nativePaperQuery = '(max-width: 767px), (hover: none) and (pointer: coarse)'
+// Live 3D papers are the default on every screen. Keep the native Safari
+// workaround available explicitly while the original mechanism is re-tested.
+export function nativeWritingRequested(search: string) {
+  const params = new URLSearchParams(search)
+  return params.get('paper') === 'native' || params.get('camera') === 'parked'
+}
 
 // The paper must outlive the scene, including on devices normally using the
 // projected desktop reader. Graphics recovery cannot remove article content.
