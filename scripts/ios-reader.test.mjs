@@ -8,7 +8,7 @@ const compile = async name => ts.transpileModule(await readFile(new URL(`../src/
 const url = code => `data:text/javascript;base64,${Buffer.from(code).toString('base64')}`
 const three = new URL('../node_modules/three/build/three.module.js', import.meta.url).href
 const { createCameraMotion, advanceCameraMotion } = await import(url((await compile('cameraMotion')).replace("'three'", JSON.stringify(three))))
-const { surfacePresentation } = await import(url(await compile('surfaceProjection')))
+const { surfacePresentation, createSurfaceTracker, surfaceHasSettled } = await import(url(await compile('surfaceProjection')))
 
 test('top-down paper alignment settles upright even with one rendered frame per second', () => {
   for (const delta of [1 / 60, 1 / 30, .2, 1]) for (const yaw of [-.22, .43, 1.08]) {
@@ -46,4 +46,16 @@ test('landed papers drop their transform while travelling papers keep the projec
   assert.equal(moving.mode, 'projected'); assert.equal(moving.left, '0px'); assert.equal(moving.top, '0px'); assert.match(moving.transform, /^matrix\(/)
   const existing = surfacePresentation({ a: 1, b: 0, c: 0, d: 1, x: 35.3, y: 145.7, width: 320, height: 440 })
   assert.equal(existing.transform, 'matrix(1,0,0,1,35,146)', 'other desk surfaces keep their existing projection mode')
+})
+
+
+test('a sheet moving across a square-on camera keeps using transforms until it parks', () => {
+  const tracker = createSurfaceTracker()
+  for (const x of [35, 30, 20, 5, -15]) {
+    const presentation = surfacePresentation({ a: 1, b: 0, c: 0, d: 1, x, y: 140, width: 320, height: 440 }, surfaceHasSettled(tracker, x, 140))
+    assert.match(presentation.transform, /^matrix/); assert.equal(presentation.left, '0px')
+  }
+  for (let frame = 0; frame < 3; frame++) surfaceHasSettled(tracker, -15, 140)
+  const parked = surfacePresentation({ a: 1, b: 0, c: 0, d: 1, x: -15, y: 140, width: 320, height: 440 }, surfaceHasSettled(tracker, -15, 140))
+  assert.equal(parked.transform, 'none'); assert.equal(parked.left, '-15px')
 })
