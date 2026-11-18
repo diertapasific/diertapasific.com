@@ -1,0 +1,1 @@
+export function renderArticles(editions: Record<string, { title: string; author: string; publishedAt: string; url: string; markdown: string }>): Record<string, { title: string; author: string; publishedAt: string; url: string; firstHeading: string; html: string; bodyHtml: string }>

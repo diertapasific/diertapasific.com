@@ -1,15 +1,13 @@
 'use client'
 
-import { lazy, Suspense, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, ArrowUpRight, CaretRight, FolderSimple, GithubLogo } from '@phosphor-icons/react'
 import { PROJECTS } from '../pages/Projects'
 import { POSTS } from '../pages/Blog'
 import { projectOverviews } from './projectOverviews'
 
-const ArticleReader = lazy(() => import('./ArticleReader').then(module => ({ default: module.ArticleReader })))
-function ReaderLoading() {
-  return <div role="status" className="space-y-5 p-6"><p className="eyebrow">opening reader</p><div className="h-6 w-2/3 animate-pulse bg-zinc-200" />{[1, 2, 3].map(line => <div key={line} className="h-3 w-full animate-pulse bg-zinc-200" />)}</div>
-}
+import { ArticleReader } from './ArticleReader'
+import { ArticleReaderBoundary } from './ArticleReaderBoundary'
 const projects = PROJECTS.filter(project => ['Beacon', 'SumTube', 'Cardify', 'Rupcara', 'VeganFuel'].includes(project.name))
 const external = { target: '_blank', rel: 'noopener noreferrer' }
 const actionClass = 'inline-flex min-h-11 items-center justify-center gap-1.5 border px-2 font-mono text-[9px] transition-colors active:scale-[.98]'
@@ -51,7 +49,7 @@ export function ProjectWorkspace({ compact, height, requestedProject }: { compac
         <a className="inline-flex min-h-11 shrink-0 items-center gap-2 px-2 text-[11px] text-zinc-500 underline underline-offset-4" href="https://github.com/diertapasific" {...external}>more on GitHub<ArrowUpRight size={13} /></a>
       </aside>}
       {project && <div ref={scrollOverview ? detail : undefined} data-project-overview-scroll={scrollOverview || undefined} className={scrollOverview ? 'surface-scroll min-h-0 overflow-y-auto overscroll-contain' : 'flex min-h-0 flex-col overflow-hidden'}>
-        <Suspense fallback={<ReaderLoading />}>{readingArticle ? <ArticleReader projectId={project.id} projectName={project.name} onBack={() => setView('overview')} /> : <>
+        {readingArticle ? <ArticleReaderBoundary key={project.id} source={POSTS.find(post => post.projectId === project.id)?.href || 'https://medium.com/@diertapasific'}><ArticleReader projectId={project.id} projectName={project.name} onBack={() => setView('overview')} /></ArticleReaderBoundary> : <>
           <header className={`shrink-0 border-b border-zinc-300 ${compact ? tight ? 'p-2.5' : 'p-3' : 'px-5 py-3'}`}>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div><p className="mb-1 font-mono text-[8px] uppercase tracking-[.08em] text-zinc-400">project / {project.id}</p><h3 ref={title} tabIndex={-1} className={`${compact ? 'text-[26px]' : 'text-[32px]'} leading-none tracking-[-.05em] outline-none`}>{project.name}</h3></div>
@@ -71,7 +69,7 @@ export function ProjectWorkspace({ compact, height, requestedProject }: { compac
               <section aria-label="Project takeaway" className="border-t border-zinc-300 pb-2 pt-4"><h4 className="mb-2 font-mono text-[9px] uppercase tracking-[.08em] text-zinc-400">what stayed with me</h4><p className="max-w-[65ch] text-[13px] leading-[1.7] text-zinc-600">{projectOverviews[project.id].takeaway}</p></section>
             </article>
           </div>
-        </>}</Suspense>
+        </>}
       </div>}
     </div>
     <div className="flex h-[22px] shrink-0 items-center justify-between border-t border-zinc-300 px-3 font-mono text-[8px] text-zinc-500"><span>{project ? `${project.name.toLowerCase()} / ${readingArticle ? 'article' : 'overview'}` : 'choose a folder'}</span><span>personal workspace</span></div>

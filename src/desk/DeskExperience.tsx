@@ -12,7 +12,6 @@ import type { OpeningMode } from './opening'
 import { useTifaChat } from './useTifaChat'
 import { TifaConversation } from './TifaConversation'
 import { DeskNavigation } from './DeskNavigation'
-import { loadPaperArticle } from './loadPaperArticle'
 import type { TifaSource } from './tifaAnswers'
 
 const DeskScene = lazy(() => import('./DeskScene'))
@@ -78,7 +77,6 @@ export default function DeskExperience() {
 
   const navigate = useCallback((destination: Destination | null, about: AboutSection = 'intro') => {
     if (opening) return
-    if (destination === 'writing') void loadPaperArticle().catch(() => {})
     if (destination) returnFocus.current = document.activeElement as HTMLElement
     const hash = destination ? `#${destination}${destination === 'about' && about !== 'intro' ? `/${about}` : ''}` : '#desk'
     window.history.pushState(null, '', hash)

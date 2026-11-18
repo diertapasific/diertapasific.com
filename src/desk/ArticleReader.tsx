@@ -18,7 +18,7 @@ export function ArticleReader({ projectId, projectName, onBack }: { projectId: s
         <p className="eyebrow">from my Medium / text edition</p>
         <h3 ref={title} tabIndex={-1} className="mt-4 text-[28px] leading-tight tracking-[-.04em] outline-none">{article.title}</h3>
         <p className="mb-7 mt-3 border-b border-zinc-300 pb-5 font-mono text-[10px] text-zinc-500">{article.author} / {date}</p>
-        <MarkdownDocument markdown={article.markdown} />
+        <MarkdownDocument html={article.html} />
         <a href={article.url} target="_blank" rel="noopener noreferrer" className="mt-8 inline-flex min-h-11 items-center border-t border-zinc-300 pt-3 font-mono text-[10px] text-zinc-500 underline underline-offset-4">original article on Medium</a>
       </article>
     </div>

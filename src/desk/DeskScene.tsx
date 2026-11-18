@@ -74,7 +74,7 @@ const MonitorShelf = memo(function MonitorShelf() {
 function Monitors(props: ObjectProps & { suppressClickUntil: MutableRefObject<number> }) {
   const { size } = useThree()
   const mobile = size.width < 768, active = props.selected === 'projects' && props.contentReady
-  const surface = { destination: 'projects' as const, aboutSection: props.aboutSection, onAboutSection: props.onAboutSection, reducedMotion: props.reducedMotion }
+  const surface = { dark: props.dark, destination: 'projects' as const, aboutSection: props.aboutSection, onAboutSection: props.onAboutSection, reducedMotion: props.reducedMotion }
   return <group position={[0, 0, monitorDepth + 1]}>
     <MonitorArm /><MonitorShelf /><ShelfObjects interactive={!props.selected && !props.chatOpen && props.openingMode === 'none'} suppressClickUntil={props.suppressClickUntil} />
     <group position={[.2, 1.57, -1.0]}>
