@@ -17,7 +17,7 @@ test('a successful main model needs one request and retains strict JSON output',
   assert.equal(calls,1);assert.equal(result.model,DEFAULT_MODEL);assert.equal(result.result.reply,'A supported reply.')
 })
 test('model failures, overload, rate limits and unreadable replies get one compatible alternate',async()=>{
-  for (const first of [()=>bad(404,'model_not_found'),()=>bad(503),()=>bad(429,'rate_limit_exceeded','12'),()=>bad(400,'json_validate_failed'),()=>Response.json({choices:[]}),()=>Response.json({choices:[{finish_reason:'length',message:{content:'{"reply":"incomplete"}'}}]}),()=>{throw new TypeError('Network failure')}]) {
+  for (const first of [()=>bad(404,'model_not_found'),()=>bad(503),()=>bad(429,'rate_limit_exceeded','12'),()=>bad(400,'json_validate_failed'),()=>bad(400,'invalid_request_error'),()=>Response.json({choices:[]}),()=>Response.json({choices:[{finish_reason:'length',message:{content:'{"reply":"incomplete"}'}}]}),()=>{throw new TypeError('Network failure')}]) {
     const requests=[]
     const result=await run(async(url,options)=>{requests.push(JSON.parse(options.body));return requests.length===1?first():valid()})
     assert.deepEqual(requests.map(body=>body.model),[DEFAULT_MODEL,DEFAULT_FALLBACK_MODEL])
