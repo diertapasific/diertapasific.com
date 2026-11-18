@@ -4,3 +4,10 @@ dist/
 *.local
 .env
 .env.local
+.env.*
+!.env.example
+.spotify/
+dist-worker/
+.dev.vars*
+
+.vercel/

@@ -1,119 +1,7 @@
 import { ArrowUpRight, GithubLogo } from '@phosphor-icons/react'
 
-interface ProjectLink {
-  label: string
-  href: string
-  icon: React.ElementType
-}
-
-interface Project {
-  id: string
-  name: string
-  tagline: string
-  description: string
-  tags: string[]
-  links: ProjectLink[]
-}
-
-const PROJECTS: Project[] = [
-  {
-    id: '01',
-    name: 'Beacon',
-    tagline: 'AI-Generated Personalized Learning Paths',
-    description: "Full-stack AI-powered learning app that generates personalized, structured learning paths for any skill on demand. Users describe what they want to learn, their experience level, and weekly availability, and Beacon's AI builds a multi-phase curriculum of bite-sized lessons, quizzes, and real-world examples tailored specifically to them.",
-    tags: ['Next.js', 'PostgreSQL', 'Prisma', 'Groq API'],
-    links: [
-      { label: 'Repository', href: 'https://github.com/diertapasific/beacon', icon: GithubLogo },
-      { label: 'Live Demo', href: 'https://beaconlearn.vercel.app/', icon: ArrowUpRight },
-    ],
-  },
-  {
-    id: '02',
-    name: 'SumTube',
-    tagline: 'YouTube Videos into Instant Summaries',
-    description: 'AI-powered Streamlit app that extracts transcripts and applies multi-pass HuggingFace summarization to distill any YouTube video into clean, readable insights with downloadable PDF reports.',
-    tags: ['Python', 'Streamlit', 'HuggingFace', 'NLP'],
-    links: [
-      { label: 'Repository', href: 'https://github.com/diertapasific/sumtube', icon: GithubLogo },
-      { label: 'Live Demo', href: 'https://sumtube.streamlit.app/', icon: ArrowUpRight },
-    ],
-  },
-  {
-    id: '03',
-    name: 'Cardify',
-    tagline: 'LLM-Powered Flashcard Generator from PDF',
-    description: 'Web app that ingests uploaded PDF documents, chunks the text intelligently, and leverages the Groq LLM API to generate structured Q&A flashcards — with progress tracking and a PDF export.',
-    tags: ['Python', 'Streamlit', 'Groq API', 'LLM'],
-    links: [
-      { label: 'Repository', href: 'https://github.com/diertapasific/cardify', icon: GithubLogo },
-      { label: 'Live Demo', href: 'https://cardifyai.streamlit.app/', icon: ArrowUpRight },
-    ],
-  },
-  {
-    id: '04',
-    name: 'Rupcara',
-    tagline: 'AI Money Recognition for the Visually Impaired',
-    description: 'Deep learning tool using a fine-tuned ResNet-18 model to recognize Indonesian Rupiah banknotes across multiple print years with real-time speech synthesis audio output for accessibility.',
-    tags: ['PyTorch', 'ResNet-18', 'Computer Vision', 'TTS'],
-    links: [
-      { label: 'Repository', href: 'https://github.com/diertapasific/rupcara', icon: GithubLogo },
-      { label: 'Live Demo', href: 'https://rupcara.streamlit.app/', icon: ArrowUpRight },
-    ],
-  },
-  {
-    id: '05',
-    name: 'ChatDP',
-    tagline: "AI Personal Assistant — this site's chatbot",
-    description: 'Custom chatbot powered by a fine-tuned sentence transformer model converted to ONNX for client-side inference. Zero server costs, real-time semantic matching directly in the browser.',
-    tags: ['ONNX', 'Transformers.js', 'TypeScript', 'Semantic Search'],
-    links: [
-      { label: 'Repository', href: 'https://github.com/diertapasific/diertapasific.github.io', icon: GithubLogo },
-    ],
-  },
-  {
-    id: '06',
-    name: 'Frezz',
-    tagline: 'AI Fruit Freshness Detector',
-    description: 'CNN model achieving 98% accuracy classifying fresh and rotten apples, bananas, and oranges. Converted to TensorFlow.js and deployed as a Progressive Web Application.',
-    tags: ['TensorFlow.js', 'CNN', 'PWA', 'Computer Vision'],
-    links: [
-      { label: 'Repository', href: 'https://github.com/shafamira/frezz', icon: GithubLogo },
-      { label: 'Dataset', href: 'https://www.kaggle.com/datasets/sriramr/fruits-fresh-and-rotten-for-classification', icon: ArrowUpRight },
-    ],
-  },
-  {
-    id: '07',
-    name: 'Telecom Churn Analysis',
-    tagline: 'Customer Churn Prediction with Machine Learning',
-    description: 'End-to-end ML pipeline for telecom churn prediction using Random Forest. Feature importance reveals Total Day Charge, Total Day Minutes, and Customer Service Calls as top predictors.',
-    tags: ['Python', 'Scikit-learn', 'EDA', 'Random Forest'],
-    links: [
-      { label: 'Repository', href: 'https://github.com/diertapasific/telecom-churn', icon: GithubLogo },
-      { label: 'Dataset', href: 'http://kaggle.com/datasets/mnassrib/telecom-churn-datasets', icon: ArrowUpRight },
-    ],
-  },
-  {
-    id: '08',
-    name: 'VeganFuel',
-    tagline: 'Vegan Food Ordering iOS App',
-    description: 'Swift-based iOS food ordering app with user authentication, database management, and a clean plant-based meal discovery experience. Designed in Figma from wireframes to final handoff.',
-    tags: ['Swift', 'iOS', 'Figma', 'Firebase'],
-    links: [
-      { label: 'Repository', href: 'https://github.com/diertapasific/VeganFuel', icon: GithubLogo },
-      { label: 'UI Preview', href: 'https://www.figma.com/proto/oyGd1FC6OvZJboVkG6nnJi/Mock-Up-VeganFuel?node-id=117-35&starting-point-node-id=117%3A35', icon: ArrowUpRight },
-    ],
-  },
-  {
-    id: '09',
-    name: 'Priocars',
-    tagline: 'Car Rental Database System',
-    description: 'Database systems class final project — structured schema design, optimized SQL queries for insertions, updates, and retrievals, and a clean interface for managing rental transactions.',
-    tags: ['SQL', 'Database Design', 'Figma'],
-    links: [
-      { label: 'UI Preview', href: 'https://www.figma.com/proto/zB6oo2ksVjT02lNoeKLVxX/priocars?node-id=2-154&scaling=contain&content-scaling=fixed', icon: ArrowUpRight },
-    ],
-  },
-]
+import { PROJECTS } from '../data/projects'
+export { PROJECTS } from '../data/projects'
 
 export default function Projects() {
   return (
@@ -153,7 +41,7 @@ export default function Projects() {
                   {/* Links — desktop */}
                   <div className="hidden md:flex items-center gap-2 flex-shrink-0">
                     {project.links.map(link => {
-                      const LinkIcon = link.icon
+                      const LinkIcon = link.icon === 'github' ? GithubLogo : ArrowUpRight
                       return (
                         <a
                           key={link.label}
@@ -189,7 +77,7 @@ export default function Projects() {
                 {/* Links — mobile */}
                 <div className="flex flex-wrap gap-2 mt-4 md:hidden">
                   {project.links.map(link => {
-                    const LinkIcon = link.icon
+                    const LinkIcon = link.icon === 'github' ? GithubLogo : ArrowUpRight
                     return (
                       <a
                         key={link.label}

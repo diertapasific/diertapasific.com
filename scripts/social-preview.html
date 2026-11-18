@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<!-- Development-only image composition. Capture at 1200 x 630 for the social image. -->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dipa / social preview composition</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <style>
+      html, body { margin: 0; width: 1200px; height: 630px; overflow: hidden; background: #f6f6f6; }
+      .share-card { position: relative; isolation: isolate; width: 1200px; height: 630px; overflow: hidden; color: #2a2a2a; background: #f6f6f6; font-family: 'Outfit', sans-serif; }
+      #share-scene { position: absolute; left: 280px; top: 0; width: 1100px; height: 630px; pointer-events: none; mask-image: linear-gradient(to right, transparent, #18181b 18%); }
+      .share-copy { position: relative; width: 380px; height: 100%; margin-left: 48px; pointer-events: none; }
+      .share-brand { position: absolute; top: 35px; display: flex; align-items: baseline; gap: 12px; }
+      .share-brand strong { font-size: 34px; font-weight: 400; letter-spacing: -2px; }
+      .share-brand span { color: #939393; font-size: 32px; font-weight: 400; }
+      .share-eyebrow { position: absolute; top: 145px; margin: 0; font: 10px 'JetBrains Mono', monospace; letter-spacing: 1.2px; text-transform: uppercase; color: #777777; }
+      .share-title { position: absolute; top: 183px; margin: 0; font-size: 58px; font-weight: 400; letter-spacing: -3.2px; line-height: 1.04; }
+      .share-description { position: absolute; top: 335px; margin: 0; font-size: 18px; line-height: 1.55; color: #676767; }
+      .share-url { position: absolute; bottom: 42px; margin: 0; padding-top: 16px; width: 302px; border-top: 1px solid #c8c8c8; font: 10px 'JetBrains Mono', monospace; letter-spacing: .4px; color: #676767; }
+      .share-index { position: absolute; top: 48px; right: 48px; margin: 0; font: 9px 'JetBrains Mono', monospace; letter-spacing: 1px; color: #777777; }
+      .object-label, .miniature-trigger, [data-mobile-annotations], .surface-music { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <main class="share-card" aria-label="Dipa's personal website link preview">
+      <div id="share-scene" aria-hidden="true"></div>
+      <div class="share-copy">
+        <div class="share-brand"><strong>dipa</strong><span>/</span></div>
+        <p class="share-eyebrow">a personal space</p>
+        <h1 class="share-title">a work in<br />progress.</h1>
+        <p class="share-description">engineer. builder.<br />curious human.</p>
+        <p class="share-url">diertapasific.github.io</p>
+      </div>
+      <p class="share-index">PROJECTS / WRITING / READING</p>
+    </main>
+    <script type="module">
+      import React from 'react'
+      import { createRoot } from 'react-dom/client'
+      import DeskScene from '/src/desk/DeskScene.tsx'
+      import '/src/index.css'
+      import '/src/desk/desk.css'
+
+      const surface = document.getElementById('share-scene')
+      const noop = () => {}
+      await document.fonts.ready
+      createRoot(surface).render(React.createElement(DeskScene, {
+        dark: false, selected: null, onSelect: noop, aboutSection: 'intro', onAboutSection: noop,
+        standing: true, surface: { current: surface }, reducedMotion: true, reset: 0,
+        openingMode: 'none', onOpeningComplete: noop,
+        onReady: () => document.querySelector('main').setAttribute('data-ready', 'true'),
+        onFailure: () => document.querySelector('main').setAttribute('data-failed', 'true'),
+      }))
+    </script>
+  </body>
+</html>

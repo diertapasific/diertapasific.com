@@ -1,0 +1,17 @@
+Tifa's 3D model
+
+Title: Yorkie Statue Scan
+Creator: carlm419
+Source: https://www.thingiverse.com/thing:1620785
+Source file: Yorkie_Statue_Scan_Without_Bow.stl
+License: Creative Commons Attribution 4.0 International (CC BY 4.0)
+License URL: https://creativecommons.org/licenses/by/4.0/
+
+The creator's bow-free scan has been simplified from 523,626 to 65,000
+triangles, rotated to Y-up, centered, resized, and converted from STL to
+GLB for this portfolio. Normals were recomputed and smoothed. Monochrome coat shading, separate
+eyes and nose, blinking, breathing, and weighted head movement are applied
+at runtime. The source has no
+animation rig. No endorsement by the original creator is implied.
+
+The original creator's attribution and license apply to this adapted mesh.

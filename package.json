@@ -6,7 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "build:worker": "tsc -p worker/tsconfig.json && vite build --config worker/vite.config.ts",
+    "check:api": "tsc -p tsconfig.api.json",
+    "build:vercel": "npm run check:api && npm run check:api:runtime && npm run build",
+    "check:api:runtime": "node scripts/check-api-runtime.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.7",
@@ -14,9 +18,12 @@
     "@react-three/fiber": "^8.18.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "three": "^0.169.0"
   },
   "devDependencies": {
+    "@types/node": "^22.20.5",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
     "@types/three": "^0.169.0",
