@@ -59,3 +59,23 @@ test('a sheet moving across a square-on camera keeps using transforms until it p
   const parked = surfacePresentation({ a: 1, b: 0, c: 0, d: 1, x: -15, y: 140, width: 320, height: 440 }, surfaceHasSettled(tracker, -15, 140))
   assert.equal(parked.transform, 'none'); assert.equal(parked.left, '-15px')
 })
+
+
+test('half-pixel rounded book pages can start and finish the 3D turn', () => {
+  for (const worldWidth of [170.5, 201.5, 232.5]) {
+    const width = Math.round(worldWidth), height = 256
+    const landed = surfacePresentation({ a: worldWidth/width, b: 0, c: 0, d: 1, x: 20, y: 140, width, height })
+    assert.equal(landed.mode, 'native', 'a half-pixel rounding boundary must not lock the turn')
+    const noise = surfacePresentation({ a: (worldWidth-1e-8)/width, b: 1e-12, c: -1e-12, d: 1, x: 20, y: 140, width, height })
+    assert.equal(noise.mode, 'native', 'camera arithmetic may add tiny floating-point error')
+    const moving = surfacePresentation({ a: (width-.6)/width, b: 0, c: 0, d: 1, x: 20, y: 140, width, height })
+    assert.equal(moving.mode, 'projected', 'a page still travelling cannot be treated as landed')
+  }
+})
+
+
+test('half-pixel page height tolerates the existing tiny top-down camera tilt', () => {
+  const worldHeight=237.5,height=Math.round(worldHeight)
+  const projection=surfacePresentation({a:1,b:0,c:0,d:Math.cos(Math.atan2(.001,9))*worldHeight/height,x:20,y:140,width:186,height})
+  assert.equal(projection.mode,'native')
+})
