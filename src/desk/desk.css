@@ -252,3 +252,11 @@ html.desk-page body { position: fixed; inset: 0; }
 .surface-projects .monitor-document blockquote { color: var(--sheet-muted); }
 .surface-projects .monitor-document :is(code, pre) { background: var(--sheet-soft); }
 .surface-projects :is(button, a):focus-visible { outline: 2px solid var(--sheet-ink); outline-offset: -2px; }
+
+/* Native SVG cursors keep the blueprint detail off the animation loop. */
+@media (hover: hover) and (pointer: fine) {
+  .desk-app, [data-object-surface], .contact-card { --desk-pointer: url('/cursor-ink.svg') 4 3, default; cursor: var(--desk-pointer); }
+  .desk-app[data-theme="dark"], [data-object-surface][data-theme="dark"], .contact-card[data-theme="dark"] { --desk-pointer: url('/cursor-chalk.svg') 4 3, default; }
+  .desk-app :is(button, a, [role="button"]), [data-object-surface] :is(button, a), .contact-card :is(button, a), .scene-layer canvas { cursor: var(--desk-pointer); }
+  .desk-app :is(input, textarea), .monitor-document, .surface-scroll, .tifa-bubble p, .tifa-user-bubble p { cursor: text; }
+}
