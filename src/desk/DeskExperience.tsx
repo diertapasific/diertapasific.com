@@ -35,6 +35,9 @@ export default function DeskExperience() {
   const [route, setRoute] = useState(readLocation)
   const chat = useTifaChat()
   const nativeWriting = useNativePaper()
+  // Explicit, opt-in comparison for device-specific Safari paint failures.
+  // Normal visits always retain the 3D desk and its original rendering quality.
+  const [paperCheck] = useState(() => new URLSearchParams(window.location.search).get('paper-check') === 'html')
   const [writingIndex, setWritingIndex] = useState(0)
   const [projectRequest,setProjectRequest] = useState<{id:string;revision:number;article?:boolean}|null>(null)
   const [openingMode, setOpeningMode] = useState<OpeningMode>(() => {
@@ -58,7 +61,8 @@ export default function DeskExperience() {
   const heading = useRef<HTMLHeadingElement>(null)
   const returnFocus = useRef<HTMLElement | null>(null)
   const selected = route.destination
-  const writingOpen = writingReaderAvailable(selected, nativeWriting, failed)
+  const isolatedWriting = paperCheck && selected === 'writing'
+  const writingOpen = writingReaderAvailable(selected, nativeWriting, failed || isolatedWriting)
   const chatOpen=Boolean(route.companion),focused=Boolean(selected)||chatOpen
   const opening = openingMode !== 'none' && !failed
   const active = destinations.find(item => item.id === selected)
@@ -161,14 +165,14 @@ export default function DeskExperience() {
     return () => window.removeEventListener('keydown', key)
   }, [navigate, selected, opening,chatOpen])
   useEffect(() => {
-    if (ready || failed) return
+    if (ready || failed || isolatedWriting) return
     const timer = window.setTimeout(() => onFailure('load-timeout'), 20000)
     return () => window.clearTimeout(timer)
-  }, [ready, failed, onFailure, sceneKey])
+  }, [ready, failed, isolatedWriting, onFailure, sceneKey])
 
   return <IconContext.Provider value={{ weight: 'light', size: 18 }}>
     {import.meta.env.DEV && new URLSearchParams(window.location.search).has('scene-checks') && <SceneDevTools />}
-    <main data-theme={dark ? 'dark' : 'light'} data-opening={openingMode} data-scene-failure={failure || undefined} aria-busy={opening || undefined} className={`desk-app relative min-h-[100dvh] w-full overflow-hidden bg-[#f6f6f6] text-[#2a2a2a] ${opening ? 'is-opening' : ''} ${focused ? 'has-selection' : ''} ${chatOpen?'has-chat':''} ${selected === 'about' || selected === 'reading' ? 'has-book' : ''} ${reducedMotion ? 'reduce-motion' : ''}`}>
+    <main data-paper-check={isolatedWriting ? 'html' : undefined} data-theme={dark ? 'dark' : 'light'} data-opening={openingMode} data-scene-failure={failure || undefined} aria-busy={opening || undefined} className={`desk-app relative min-h-[100dvh] w-full overflow-hidden bg-[#f6f6f6] text-[#2a2a2a] ${opening ? 'is-opening' : ''} ${focused ? 'has-selection' : ''} ${chatOpen?'has-chat':''} ${selected === 'about' || selected === 'reading' ? 'has-book' : ''} ${reducedMotion ? 'reduce-motion' : ''}`}>
       {!opening && <a href="#desk-index" className="skip-link">skip to navigation</a>}
       <header className="desk-header absolute inset-x-0 top-0 z-20 flex items-center justify-between px-5 py-5 md:px-10 md:py-7">
         <button disabled={opening} onClick={() => navigate(null)} className="flex min-h-11 items-center gap-3 text-[25px] tracking-[-.06em] active:scale-[.98]" aria-label="Dipa's desk, return home">dipa <span className="font-light text-zinc-400">/</span></button>
@@ -187,8 +191,8 @@ export default function DeskExperience() {
       </div>}
 
       <div ref={sceneSurface} onClick={event => { if (failed && focused && event.target === event.currentTarget) onDismiss() }} className="scene-layer absolute inset-0" aria-label="Interactive 3D desk. Drag to look around or choose an object from the navigation.">
-        {!failed && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
-        {!ready && !failed && <SceneSkeleton />}
+        {!failed && !isolatedWriting && <SceneBoundary key={sceneKey} onError={onFailure}><Suspense fallback={null}><DeskScene nativeWriting={nativeWriting} writingIndex={writingIndex} onWritingIndex={setWritingIndex} onDismiss={onDismiss} chatOpen={chatOpen} onAsk={onAsk} replyPulse={chat.messages[chat.messages.length-1]?.id??0} projectRequest={projectRequest} openingMode={openingMode} onOpeningComplete={onOpeningComplete} dark={dark} selected={selected} onSelect={onSelect} aboutSection={route.about} onAboutSection={onAboutSection} standing={standing} surface={sceneSurface} reducedMotion={reducedMotion} reset={reset} zoomStep={zoomStep} onReady={onReady} onFailure={onFailure} /></Suspense></SceneBoundary>}
+        {!ready && !failed && !isolatedWriting && <SceneSkeleton />}
         {failed && !chatOpen && !writingOpen && <div className="absolute inset-x-6 top-[45%] mx-auto max-w-sm border-y border-zinc-300 py-7 text-center"><p className="text-lg">The desk couldn't be drawn.</p><p className="mt-3 text-sm leading-relaxed text-zinc-500">You can still explore every section using the navigation below.</p><button onClick={() => { setFailure(null); setReady(false); setSceneKey(v => v + 1) }} className="mt-4 min-h-11 font-mono text-xs underline underline-offset-4">try loading again</button></div>}
       </div>
 
