@@ -21,7 +21,7 @@ For local Spotify authorization, register `http://127.0.0.1:5173/api/spotify/cal
 
 `vercel.json` builds the Vite frontend and two Node functions:
 
-- `POST /api/tifa`: bounded conversations, profile/article retrieval, Groq calls and a shared eight-request-per-minute visitor quota.
+- `POST /api/tifa`: bounded conversations, profile/article retrieval, Groq calls and a shared eight-request-per-minute IP quota. Before calling Groq, atomic shared budgets also cap each IP at 40 AI requests per 24-hour window and the site at 20 per minute / 500 per 24-hour window. These windows start on their first admitted request; they do not reset at midnight. Invalid messages and supported saved-profile replies do not spend the AI budget. Each admitted request can try up to two models, and provider token/account limits still apply.
 - `GET /api/spotify/now-playing`: a sanitized public playback snapshot, shared five-second cache and distributed polling lease. Refresh tokens and last-observed tracks persist in Redis. Provider backoff also survives cold instances.
 
 Tifa answers a small set of supported identity, employment-date and hiring questions directly from the public profile, including during provider outages. Other questions use Groq with server-selected profile notes and article excerpts. The default chain is GPT-OSS 20B, then GPT-OSS 120B, both available on Groq’s free plan with compatible strict JSON output. Each model is tried at most once, with six seconds per attempt and a twelve-second shared deadline. Model unavailability, provider request rejection, overload, model rate limits and invalid replies can trigger the alternate; invalid credentials and explicit account-wide quota errors cannot. If both fail, the browser shows saved profile notes and respects the returned retry interval. This does not remove Groq account quotas or guarantee capacity during a provider-wide outage.
@@ -35,6 +35,9 @@ Configure **Production** variables before redeploying:
 | `GROQ_API_KEY` | Secret | Server-only Groq credential |
 | `SPOTIFY_REFRESH_TOKEN` | Secret | Initial PKCE connection token; subsequent rotations are saved in Redis |
 | `UPSTASH_REDIS_REST_TOKEN` or `KV_REST_API_TOKEN` | Secret | Redis write credential |
+| `TIFA_DAILY_VISITOR_LIMIT` | Config | Optional positive integer; defaults to 40 AI requests per IP per 24 hours |
+| `TIFA_GLOBAL_MINUTE_LIMIT` | Config | Optional positive integer; defaults to 20 site-wide AI requests per minute |
+| `TIFA_GLOBAL_DAILY_LIMIT` | Config | Optional positive integer; defaults to 500 site-wide AI requests per 24 hours |
 | `SPOTIFY_CLIENT_ID` | Config | Public Spotify app ID |
 | `GROQ_MODEL` | Config | Primary model; defaults to `openai/gpt-oss-20b` |
 | `GROQ_FALLBACK_MODEL` | Config | Optional override; defaults to `openai/gpt-oss-120b` (empty disables it) |
@@ -64,7 +67,7 @@ The book curl keeps its original 3D mechanism. Its alignment gate now accepts ha
 
 Legacy Writing uses its original live 3D paper mechanism on desktop, phone and tablet. The camera and graphics context stay active, the full saved article is displayed on the projected paper, and switching articles moves the physical sheets on mobile too. The same renderer handles entry and return, with no bitmap handoff or renderer warmup. Articles are bundled full text editions, not fetched from Medium while scrolling.
 
-Refresh the saved public articles with `python3 scripts/sync-medium-articles.py`, then rebuild. Current profile notes override historical biography. VeganFuel has no Medium write-up. The legacy Cloudflare Worker remains under `worker/`; it is not the backend used by the Vercel build. Building it does not publish it. The legacy GitHub Pages workflow is manual-only so pushes no longer deploy a second copy with unavailable server endpoints.
+Refresh the saved public articles with `python3 scripts/sync-medium-articles.py`, then rebuild. Current profile notes override historical biography. VeganFuel has no Medium write-up. The legacy Cloudflare Worker remains under `worker/`; it is not the backend used by the Vercel build. Building it does not publish it. The legacy GitHub Pages publishing workflow has been removed.
 
 For the affected Safari device, the previous native reader remains available at `?paper=native#writing`. It copies the rendered desk into a static 2D bitmap, disposes the normal renderer while reading, and recreates it on exit. `?paper=native&camera=parked#writing` retains the hidden renderer instead and resumes the existing camera on exit; context eviction falls back to a fresh renderer. The older `?camera=parked#writing` comparison link still selects this native path. The native reader also remains available after a real graphics failure regardless of URL. These alternatives are diagnostic fallbacks; they are no longer selected automatically on touch devices. Physical Safari verification of the restored live reader is still required.
 
@@ -75,3 +78,11 @@ The measured local Chromium overview at 1440x1000 and 440x956 submitted 481 draw
 Theme selection starts from `prefers-color-scheme` and follows system changes while the page is open. The manual toggle overrides the current display until the system preference changes or the page reloads. Older locally saved theme values no longer override the visitor's current system preference.
 
 For local profiling and graphics recovery, open `http://127.0.0.1:5173/?scene-checks#writing`. The development-only controls sample the actual renderer, profile 180 frames, trace camera travel, trigger graphics failures and simulate inherited paper-colored text fill. Frame profiling reports interval timing, main-thread frame submission time (not GPU or OS CPU time), draw counts and graphics resource counts. `?scene-checks=touch#writing` forces the native fallback at any viewport, and `?scene-checks=timeout#writing` tests the readiness watchdog. `?paper-check=html#writing` isolates the native paper without initializing 3D while selected. These fault controls, profiling hooks and the HTML-only diagnostic are removed from production. No device data is collected.
+
+## Security boundaries
+
+Vercel sets the trusted forwarding header used for IP quotas. IP limits apply to shared networks, not individual people; distributed clients can still use multiple IPs, so the independent site-wide budget is required. Redis failure prevents new AI calls. CORS and fetch-metadata checks reject foreign browser origins, but they are not authentication for this intentionally public API. Quotas are tested locally with independent functions and mocked providers, never by flooding production. The retired Worker is not the production backend and has no shared quotas; do not redeploy it as a public substitute.
+
+Production headers deny embedding the desk in other sites, disable MIME sniffing, restrict referrers and unnecessary device permissions, and block plugin objects, foreign base URLs and foreign form submissions. The CSP is a baseline policy; it does not yet restrict scripts/styles, because the WebGL/HTML scene and its workers need a separately tested policy. Tifa text is rendered as text, and article HTML is generated only from checked-in Markdown with raw HTML skipped and unsafe URL schemes filtered.
+
+Keep Vercel account/team access, GitHub branch access, function spend alerts and edge firewall rules reviewed in their dashboards. App quotas protect Groq usage; they do not eliminate Vercel invocation or Redis command costs from large-scale abuse. Rotate credentials shared outside their secret store, and keep Preview credentials and storage isolated from Production.
