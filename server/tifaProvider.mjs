@@ -28,11 +28,13 @@ export async function requestTifaProvider({ env, system, messages, schema, parse
       const data = await upstream.json().catch(() => null)
       if (!upstream.ok) {
         const code = data?.error?.code
+        // Keep diagnostics operational: no prompts, chat content, response bodies or credentials.
+        console.warn('tifa_provider_rejected', JSON.stringify({ model, status: upstream.status, code: typeof code === 'string' && /^[a-z0-9_]{1,80}$/i.test(code) ? code : 'unspecified', type: ['invalid_request_error','rate_limit_error','server_error','authentication_error'].includes(data?.error?.type) ? data.error.type : 'unspecified' }))
         const credentials = upstream.status === 401 || upstream.status === 403
         const accountQuota = ['insufficient_quota', 'billing_hard_limit_reached', 'account_deactivated'].includes(code)
         last = { error: credentials ? 'credentials_unavailable' : upstream.status === 429 || accountQuota ? 'rate_limited' : upstream.status === 404 || ['model_not_found','model_decommissioned'].includes(code) ? 'model_unavailable' : code === 'json_validate_failed' ? 'invalid_response' : 'provider_unavailable', status: upstream.status === 429 || accountQuota ? 429 : 502 }
         if (last.error === 'rate_limited') retryAfter = Math.max(retryAfter, Math.max(1, Math.min(3600, Math.ceil(Number(upstream.headers.get('Retry-After')) || 30))))
-        if (credentials || accountQuota || upstream.status < 500 && !['rate_limited','model_unavailable','invalid_response'].includes(last.error)) return { ...last, ...(retryAfter ? { retryAfter } : {}) }
+        if (credentials || accountQuota || upstream.status < 500 && upstream.status !== 400 && !['rate_limited','model_unavailable','invalid_response'].includes(last.error)) return { ...last, ...(retryAfter ? { retryAfter } : {}) }
       } else {
         let value
         try { value = JSON.parse(data?.choices?.[0]?.message?.content || '') } catch { /* The alternate model may recover a malformed or truncated reply. */ }
