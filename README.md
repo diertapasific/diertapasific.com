@@ -51,6 +51,12 @@ The public canonical address, `https://www.diertapasific.com`, is tracked in `vi
 
 The Vercel project is connected to the personal GitHub repository, `diertapasific/diertapasific.com`. GitHub Pages is disabled; production hosting is on Vercel. Pull requests create Preview deployments; merging into `main` deploys Production. The `Portfolio checks` workflow runs the regression suite, compiled Node handler check, frontend build and retained Worker build. Preview backends remain unconfigured until separate secrets/storage are explicitly added. Changing Vercel environment variables requires a redeployment. The `portfolio-v1` tag preserves the site before the desk redesign.
 
+## Visitor analytics
+
+Vercel Web Analytics is mounted once at the app root through `@vercel/analytics/react` in built deployments; local development does not load it. Basic page views feed the project's Analytics dashboard with visitor counts, referrers, countries, browsers and devices. Select Production in the dashboard to exclude Preview deployments. The Hobby plan includes basic analytics; no custom events or paid add-on are used.
+
+The `beforeSend` hook accepts page views only and removes URL query parameters and hash state. No Tifa messages, answers, contact fields or custom event properties are sent. Analytics is enabled in the Vercel project dashboard; no API key or new environment secret is required. Data collection starts after deployment and cannot backfill earlier visits.
+
 ## Validation and maintenance
 
 ```sh
